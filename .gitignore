@@ -1,4 +1,8 @@
 # build your own
 staging/apk-install
 staging/apk-tools
+
+# temporary shit
 build/
+*.apk
+.env*
