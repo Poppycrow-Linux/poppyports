@@ -9,10 +9,10 @@ Ports is a repository of a packages you (or Github Actions) build. Think AUR or 
 Not right now, the ports system is far from being finished.
 
 ## TODO
-[X] Make a super basic python script
-[] Make a more elaborate compiling system
-[] Manage a temporary apk repo
-[] Make the system be able to work with Github Actions and also forward things to our own server so we can actually host things.
+- [X] Make a super basic python script
+- [ ] Make a more elaborate compiling system
+- [ ] Manage a temporary apk repo
+- [ ] Make the system be able to work with Github Actions and also forward things to our own server so we can actually host things.
 
 ## Subtitles?
 subtitles by DimaTorzok
