@@ -1,4 +1,4 @@
-## Fuck is this repo?
+## What is this repo?
 This is the ports repository for [Poppycrow Linux](https://github.com/Poppycrow-Linux).
 Check [staging branch](https://github.com/Poppycrow-Linux/poppyports/tree/staging) for staging stuff
 
