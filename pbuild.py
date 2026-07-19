@@ -9,57 +9,26 @@ import subprocess
 import urllib.request
 import tarfile
 import hashlib
-status = "idle"
+status = "idle"  # valera what is this for ???
 
 # exceptions
 class InvalidRecipeError(Exception):
   pass
 
-class InvalidChecksum(Exception):
+class InvalidChecksumError(Exception):
   pass
 
 
+# ANSI colors and printing
 class Colors:
-    """ ANSI color codes """
-    BLACK = "\033[0;30m"
-    RED = "\033[0;31m"
-    GREEN = "\033[0;32m"
-    BROWN = "\033[0;33m"
-    BLUE = "\033[0;34m"
-    PURPLE = "\033[0;35m"
-    CYAN = "\033[0;36m"
-    LIGHT_GRAY = "\033[0;37m"
-    DARK_GRAY = "\033[1;30m"
-    LIGHT_RED = "\033[1;31m"
-    LIGHT_GREEN = "\033[1;32m"
-    YELLOW = "\033[1;33m"
-    LIGHT_BLUE = "\033[1;34m"
-    LIGHT_PURPLE = "\033[1;35m"
-    LIGHT_CYAN = "\033[1;36m"
-    LIGHT_WHITE = "\033[1;37m"
-    BOLD = "\033[1m"
-    FAINT = "\033[2m"
-    ITALIC = "\033[3m"
-    UNDERLINE = "\033[4m"
-    BLINK = "\033[5m"
-    NEGATIVE = "\033[7m"
-    CROSSED = "\033[9m"
-    ERROR = "\x1b[5;97;101m"
-    WARNING = "\x1b[5;30;103m"
-    SUCCESS = "\x1b[0;97;48;5;28m"
-    SHCOMMAND = "\x1b[0;97;48;5;21m"
-    END = "\033[0m"
-    # cancel SGR codes if we don't write to a terminal
-    if not __import__("sys").stdout.isatty():
-        for _ in dir():
-            if isinstance(_, str) and _[0] != "_":
-                locals()[_] = ""
-    else:
-        # set Windows console in VT mode
-        if __import__("platform").system() == "Windows":
-            kernel32 = __import__("ctypes").windll.kernel32
-            kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
-            del kernel32
+  ERROR = "\x1b[5;97;101m"
+  WARNING = "\x1b[5;30;103m"
+  SUCCESS = "\x1b[0;97;48;5;28m"
+  SH_COMMAND = "\x1b[0;97;48;5;21m"
+  END = "\033[0m"
+
+def log(color: Colors, *args):
+  print(f"{color if color is not None else ''}I:", *args, Colors.END)
 
 
 class BuildContext: # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
@@ -68,23 +37,30 @@ class BuildContext: # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
   CXXFLAGS = ""
   LDFLAGS = "" #"-Dick2"
   SRCDIR =  None # this is package source directory
-  PKGDIR = os.getcwd() # this is package staging directory i.e. where it will be installed
+  PKGDIR = None # this is package staging directory i.e. where it will be installed
   NPROC = 1
 
-  def __init__(self, srcdir, pkgdir, recipe):
-    self.SRCDIR = srcdir
-    self.PKGDIR = pkgdir
+  def __init__(self, builddir, recipe):
+    self.BUILDDIR = builddir
+    self.SRCDIR = os.path.join(builddir, "pkgsrc")
+    self.PKGDIR = os.path.join(builddir, "pkgdir")
+    os.makedirs(self.SRCDIR, exist_ok=True)
+    os.makedirs(self.PKGDIR, exist_ok=True)    
+    
     self.NPROC = os.cpu_count() if os.cpu_count() is not None else 1
-    self.env = os.environ.copy()
+    # i think this is wrong? ARCH would refer to our target architecture whereas recipe arch is the arch it can be built for
+    # TODO: this should be replaced with if checks
     self.ARCH = recipe["arch"]
     self.recipe = recipe
+
+    self.env = os.environ.copy()
     #self.env["DESTDIR"] = self.pkgdir
     #self.env["CFLAGS"] = self.CFLAGS
     pass
 
   def sh(self, *args):
     cwd = self.SRCDIR
-    print(f"{Colors.SHCOMMAND}+$ {' '.join(args)}{Colors.END}")
+    log(Colors.SH_COMMAND, f"+$ {' '.join(args)}")
     subprocess.run(args, cwd=cwd, env=self.env, check=True)
 
   def build(self):
@@ -115,37 +91,40 @@ def download_files(ctx, recipe):
   for url in recipe["sources"]:
     if url.startswith("https://") and not url.endswith(".git"):
       filename = url.split("/")[-1]
-      dest = f"build/{filename}"
+      dest = f"{ctx.BUILDDIR}/{filename}"
       if not os.path.exists(dest):
+        log(None, f"Downloading {url} to {dest}")
         urllib.request.urlretrieve(url, dest)
-        print(f"I: Downloading {url} to {dest}")
-      else: print("I:",dest, "already exists, skipping download!")
+      else:
+        log(None, f"{dest} already exists, skipping download!")
+    
     elif url.startswith("git://"): # TODO: add cloning from https git
       skip_extracting = True
       dest = f"{ctx.SRCDIR}/{recipe["pkgname"]}"
       if not os.path.exists(dest):
-        print(f"I: Cloning {url} to {dest}")
-        #ctx.sh(f"git","clone","--depth 1",url,dest)
-        subprocess.run(("git","clone","--depth","1",url,dest),cwd=os.getcwd())
-      else: print("I:",dest, "already exists, skipping download!")
+        log(None, f"Cloning {url} to {dest} via git")
+        ctx.sh(f"git", "clone", "--depth", "1", url, dest)
+      else: 
+        log(None, f"{dest} already exists, skipping download!")
+      
   return skip_extracting
 
 
 def calc_checksum(path, algorithm="sha256"):
-    hasher = hashlib.new(algorithm)
-    with open(path, "rb") as file:
-        while chunk := file.read(8192):
-            hasher.update(chunk)
-    return hasher.hexdigest()
+  hasher = hashlib.new(algorithm)
+  with open(path, "rb") as file:
+    while chunk := file.read(8192):
+      hasher.update(chunk)
+  return hasher.hexdigest()
 
-def check_downloaded(shasum):
+def check_downloaded(ctx, shasum):
   successes = []
   files = []
   fails = []
   i = 0
   for url in recipe["sources"]:
       filename = url.split("/")[-1]
-      dest = f"build/{filename}"
+      dest = f"{ctx.BUILDDIR}/{filename}"
       files.append(dest)
       successes.append(calc_checksum(dest) == shasum[i])
   if not(False in successes):
@@ -158,46 +137,48 @@ def check_downloaded(shasum):
 
 
 def extract_src(ctx, recipe):
-    for url in recipe["sources"]:
-      filename = url.split("/")[-1]
-      dest = f"build/{filename}"
-      with tarfile.open(dest, "r") as f:
-        os.makedirs(ctx.SRCDIR, exist_ok=True)
-        f.extractall(ctx.SRCDIR)
+  for url in recipe["sources"]:
+    filename = url.split("/")[-1]
+    dest = f"{ctx.BUILDDIR}/{filename}"
+    with tarfile.open(dest, "r") as f:
+      f.extractall(ctx.SRCDIR)
 
 
 if __name__ == "__main__":
+  # TODO: can somebody do argparse later? so we can do -o and whatever else
   pkgpath = sys.argv[1]
 
   status = "read_recipe"
-  print("I: READING RECIPE")
+  log(None, "READING RECIPE")
   recipe = read_recipe(f"{pkgpath}/recipe.py")
 
-  ctx = BuildContext(f"{os.getcwd()}/build/pkgsrc", f"{os.getcwd()}/build/pkgdir", recipe)
-  os.makedirs("build", exist_ok=True)
+  # TODO: custom builddir. that way we can do packages in say build/pkg/lua and repo outputs in build/repo/lua.apk or wtv
+  ctx = BuildContext(f"{os.getcwd()}/build", recipe)
+  os.makedirs(ctx.BUILDDIR, exist_ok=True)
 
   status = "download"
-  print("I: Downloading files")
+  log(None, "Downloading files")
   skip_extracting = download_files(ctx, recipe)
 
   if "sha256sum" in recipe:
     status = "verification"
-    print("I: Checksum found in recipe, checking...")
-    if check_downloaded(recipe["sha256sum"]) == True:
-      print(f"{Colors.LIGHT_GREEN}I: ☑ Integrity check passed. {Colors.END}")
+    log(None, "Checksum found in recipe, checking...")
+    
+    if check_downloaded(ctx, recipe["sha256sum"]) == True:
+      log(Colors.SUCCESS, f"☑ Integrity check passed.")
     else:
-      print(f"{Colors.ERROR}!!!!!!!!!!!! INTEGRITY CHECK FAILED !!!!!!!!!!!!{Colors.END}") #TODO: tell what file failed.
-      print(check_downloaded(recipe["sha256sum"]), sep =" FAILED THE CHECKSUM\n", end = " FAILED THE CHECKSUM\n")
+      log(Colors.ERROR, f"!!!!!!!!!!!! INTEGRITY CHECK FAILED !!!!!!!!!!!!") #TODO: tell what file failed.
+      log(Colors.ERROR, check_downloaded(ctx, recipe["sha256sum"]), " FAILED THE CHECKSUM")
   else:
-    print(f"{Colors.WARNING}// SHA256 checksum not found in recipe {recipe["pkgname"]}, extracting without checks. {Colors.END}")
+    log(Colors.WARNING, f"// SHA256 checksum not found in recipe {recipe["pkgname"]}, extracting without checks.")
 
   if not skip_extracting:
     status = "extract"
-    print("I: Xtracting the tar")
+    log(None, "Xtracting the tar")
     extract_src(ctx, recipe)
 
   status = "build"
-  print("I: Ok running build")
+  log(None, "Ok running build")
   ctx.build()
   ctx.install()
 
@@ -209,13 +190,14 @@ if __name__ == "__main__":
     subprocess.run(["apk"] + list(args), env=os.environ, check=True)
 
   # the minimum you need to pass it seems?
+  outpath = f"{recipe['pkgname']}-{recipe['pkgver']}.apk"
   run_apk("mkpkg",
           "-I", f"name:{recipe["pkgname"]}",
           "-I", f"version:{recipe["pkgver"]}",
           "-F", ctx.PKGDIR,
-          "-o", f"{recipe['pkgname']}-{recipe['pkgver']}.apk")
+          "-o", outpath)
 
-  print(f"{Colors.SUCCESS}I: Done{Colors.END}")
+  log(Colors.SUCCESS, f"Done! Generated {outpath}")
 
 
 
