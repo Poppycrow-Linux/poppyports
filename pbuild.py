@@ -18,6 +18,50 @@ class InvalidRecipeError(Exception):
 class InvalidChecksum(Exception):
   pass
 
+
+class Colors:
+    """ ANSI color codes """
+    BLACK = "\033[0;30m"
+    RED = "\033[0;31m"
+    GREEN = "\033[0;32m"
+    BROWN = "\033[0;33m"
+    BLUE = "\033[0;34m"
+    PURPLE = "\033[0;35m"
+    CYAN = "\033[0;36m"
+    LIGHT_GRAY = "\033[0;37m"
+    DARK_GRAY = "\033[1;30m"
+    LIGHT_RED = "\033[1;31m"
+    LIGHT_GREEN = "\033[1;32m"
+    YELLOW = "\033[1;33m"
+    LIGHT_BLUE = "\033[1;34m"
+    LIGHT_PURPLE = "\033[1;35m"
+    LIGHT_CYAN = "\033[1;36m"
+    LIGHT_WHITE = "\033[1;37m"
+    BOLD = "\033[1m"
+    FAINT = "\033[2m"
+    ITALIC = "\033[3m"
+    UNDERLINE = "\033[4m"
+    BLINK = "\033[5m"
+    NEGATIVE = "\033[7m"
+    CROSSED = "\033[9m"
+    ERROR = "\x1b[5;97;101m"
+    WARNING = "\x1b[5;30;103m"
+    SUCCESS = "\x1b[0;97;48;5;28m"
+    SHCOMMAND = "\x1b[0;97;48;5;21m"
+    END = "\033[0m"
+    # cancel SGR codes if we don't write to a terminal
+    if not __import__("sys").stdout.isatty():
+        for _ in dir():
+            if isinstance(_, str) and _[0] != "_":
+                locals()[_] = ""
+    else:
+        # set Windows console in VT mode
+        if __import__("platform").system() == "Windows":
+            kernel32 = __import__("ctypes").windll.kernel32
+            kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
+            del kernel32
+
+
 class BuildContext: # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
   ARCH = "x86_64" # RUDE: fuck arm developer
   CFLAGS = "" #"-Dick"
@@ -38,7 +82,7 @@ class BuildContext: # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
   
   def sh(self, *args):
     cwd = self.SRCDIR
-    print(f"+$ {' '.join(args)}")
+    print(f"{Colors.SHCOMMAND}+$ {' '.join(args)}{Colors.END}")
     subprocess.run(args, cwd=cwd, env=self.env, check=True)
 
   def build(self):
@@ -68,10 +112,10 @@ def download_files(ctx, recipe):
   for url in recipe["sources"]:
     filename = url.split("/")[-1]
     dest = f"build/{filename}"
-    print(f"I: Downloading {url} to {dest}")
     if not os.path.exists(dest):
       urllib.request.urlretrieve(url, dest)
-    else: print(os.path.exists(dest), "already exists, skipping download!")
+      print(f"I: Downloading {url} to {dest}")
+    else: print("I:",dest, "already exists, skipping download!")
     
 def calc_checksum(path, algorithm="sha256"):
     hasher = hashlib.new(algorithm)
@@ -126,12 +170,12 @@ if __name__ == "__main__":
     status = "verification"
     print("I: Checksum found in recipe, checking...")
     if check_downloaded(recipe["sha256sum"]) == True:
-      print("I: ☑ Integrity check passed.")
+      print(f"{Colors.LIGHT_GREEN}I: ☑ Integrity check passed. {Colors.END}")
     else:
-      print("!!!!!!!!!!!! INTEGRITY CHECK FAILED !!!!!!!!") #TODO: tell what file failed.
+      print(f"{Colors.ERROR}!!!!!!!!!!!! INTEGRITY CHECK FAILED !!!!!!!!!!!!{Colors.END}") #TODO: tell what file failed.
       print(check_downloaded(recipe["sha256sum"]), sep =" FAILED THE CHECKSUM\n", end = " FAILED THE CHECKSUM\n")
   else:
-    print("!!!!!!!!!! SHA256 CHECKSUM NOT FOUND IN RECIPE", recipe["pkgname", " PROCEEDING TO EXTRACT WITHOUT CHECKS!!!!"])
+    print(f"{Colors.WARNING}// SHA256 checksum not found in recipe {recipe["pkgname"]}, extracting without checks. {Colors.END}")
 
   status = "extract"
   print("I: Xtracting the tar")
@@ -156,7 +200,7 @@ if __name__ == "__main__":
           "-F", ctx.PKGDIR,
           "-o", f"{recipe['pkgname']}-{recipe['pkgver']}.apk")
 
-  print("I: Done")
+  print(f"{Colors.SUCCESS}I: Done{Colors.END}")
 
 
 
