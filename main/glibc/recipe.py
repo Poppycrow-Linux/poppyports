@@ -1,0 +1,23 @@
+pkgname = "glibc"
+pkgver = "2.42"
+pkgrel = 0
+pkgdesc = "GNU libc"
+url = "https://gnu.org/"
+arch = "x86_64"
+license = "GPLv2"
+
+# the reason 2.42 is used rn is because this is the one debian has and links with for me
+sources = [f"https://ftp.gnu.org/gnu/{pkgname}/{pkgname}-{pkgver}.tar.xz"]
+depends = []
+
+def build(c):
+  c.SRCDIR = c.SRCDIR + f"/{pkgname}-{pkgver}"
+  # because you cannot do in tree builds gnu fuck you
+  c.sh("mkdir", "-p", c.SRCDIR + "/build")
+  c.SRCDIR = c.SRCDIR + "/build"
+
+  c.sh("../configure", "--prefix=/usr")
+  c.sh("make", f"-j{c.NPROC}")
+
+def install(c):
+  c.sh("make", "install", f"DESTDIR={c.PKGDIR}")

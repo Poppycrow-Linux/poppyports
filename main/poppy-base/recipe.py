@@ -9,7 +9,8 @@ sources = []
 
 depends = [
   "linux-stable",
-  "busybox"
+  "busybox",
+  "glibc"
 ]
 
 def build(c):
