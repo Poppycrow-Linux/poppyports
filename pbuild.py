@@ -9,18 +9,24 @@ import subprocess
 import urllib.request
 import tarfile
 
+# exceptions
+class InvalidRecipeError(Exception):
+  pass
+
 class BuildContext: # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
-  ARCH = "x86_64" # fuck arm developer
+  ARCH = "x86_64" # RUDE: fuck arm developer
   CFLAGS = "" #"-Dick"
   CXXFLAGS = ""
   LDFLAGS = "" #"-Dick2"
   SRCDIR =  None # this is package source directory
   PKGDIR = os.getcwd() # this is package staging directory i.e. where it will be installed
   
-  def __init__(self, srcdir, pkgdir):
+  def __init__(self, srcdir, pkgdir, recipe):
     self.SRCDIR = srcdir
     self.PKGDIR = pkgdir
     self.env = os.environ.copy()
+    self.ARCH = recipe["arch"]
+    self.recipe = recipe
     #self.env["DESTDIR"] = self.pkgdir
     #self.env["CFLAGS"] = self.CFLAGS
     pass
@@ -29,6 +35,12 @@ class BuildContext: # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
     cwd = self.SRCDIR
     print(f"+$ {' '.join(args)}")
     subprocess.run(args, cwd=cwd, env=self.env, check=True)
+
+  def build(self):
+    self.recipe["build"](self)
+
+  def install(self):
+    self.recipe["install"](self)
   
   def cp(self, input, output):
     raise RuntimeError("unimplemented")
@@ -38,6 +50,13 @@ def read_recipe(path):
   with open(path, "r") as f:
     recipe_def = {}
     exec(f.read(), recipe_def)
+    # TODO: probably should move verifying to a seperate function
+    invalid_keys = []
+    for key in ["sources", "pkgname", "build", "install", "arch"]:
+      if not key in recipe_def.keys():
+        invalid_keys.append(key)
+    if len(invalid_keys) >= 1:
+      raise InvalidRecipeError(f"This recipe is missing the {", ".join(invalid_keys)} key(s)!")
     return recipe_def
 
 def download_files(ctx, recipe):
@@ -60,15 +79,15 @@ if __name__ == "__main__":
   print("!! READING RECIPE")
   recipe = read_recipe(f"{pkgpath}/recipe.py")
 
-  ctx = BuildContext(f"{os.getcwd()}/build/pkgsrc", f"{os.getcwd()}/build/pkgdir")
+  ctx = BuildContext(f"{os.getcwd()}/build/pkgsrc", f"{os.getcwd()}/build/pkgdir", recipe)
   os.makedirs("build", exist_ok=True)
   
   print("!! Download files")
   download_files(ctx, recipe)
 
   print("!! Ok running build")
-  recipe["build"](ctx)
-  recipe["install"](ctx)
+  ctx.build()
+  ctx.install()
 
 
   # make apk
@@ -82,7 +101,7 @@ if __name__ == "__main__":
           "-I", f"name:{recipe["pkgname"]}",
           "-I", f"version:{recipe["pkgver"]}",
           "-F", ctx.PKGDIR,
-          "-o", f"{recipe['pkgname']}.apk")
+          "-o", f"{recipe['pkgname']}-{recipe['pkgver']}.apk")
 
   print("!! done!!!!")
 
