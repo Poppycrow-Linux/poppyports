@@ -2,6 +2,7 @@
 # i need to clean up - sam
 # TODO: handle depends and also like basically redo what chimera and APKBUILDs do
 # TODO: Everything.
+# hi sam
 import os
 import sys
 import io
@@ -9,6 +10,7 @@ import subprocess
 import urllib.request
 import tarfile
 import hashlib
+import argparse
 status = "idle"  # valera what is this for ???
 
 # exceptions
@@ -87,13 +89,13 @@ def read_recipe(path):
       raise InvalidRecipeError(f"This recipe is missing the {", ".join(invalid_keys)} key(s)!")
     return recipe_def
 
-def download_files(ctx, recipe):
+def download_files(ctx, recipe, redownload):
   skip_extracting = False
   for url in recipe["sources"]:
     if url.startswith("https://") and not url.endswith(".git"):
       filename = url.split("/")[-1]
       dest = f"{ctx.BUILDDIR}/{filename}"
-      if not os.path.exists(dest):
+      if not os.path.exists(dest) or redownload:
         log(None, f"Downloading {url} to {dest}")
         urllib.request.urlretrieve(url, dest)
       else:
@@ -102,7 +104,7 @@ def download_files(ctx, recipe):
     elif url.startswith("git://"): # TODO: add cloning from https git
       skip_extracting = True
       dest = f"{ctx.SRCDIR}/{recipe["pkgname"]}"
-      if not os.path.exists(dest):
+      if not os.path.exists(dest) or redownload:
         log(None, f"Cloning {url} to {dest} via git")
         ctx.sh(f"git", "clone", "--depth", "1", url, dest)
       else: 
@@ -146,12 +148,28 @@ def extract_src(ctx, recipe):
 
 
 if __name__ == "__main__":
-  # TODO: can somebody do argparse later? so we can do -o and whatever else
-  pkgpath = sys.argv[1]
-  builddir = sys.argv[2]
+  ignoreintegrity = False
+  parser = argparse.ArgumentParser(
+                    prog='pbuild',
+                    suggest_on_error=True,
+                    description='Compiles apk files to be used in Poppycrow Linux repos.',
+                    epilog='See more @ github.com/Poppycrow-Linux/poppyports/')
+  parser.add_argument('pkgpath', help='Path of the folder that contains the build recipe.')
+  parser.add_argument('-ignoreintegrity', '-ii', '-ignore-broken-files', action='store_true', help='Ignore any checksum errors and continue building the package.')
+  parser.add_argument('-fresh', '-new', '-redownload', action='store_true', help='Redownload files even if they are already present and pass the integrity checks.')
+  parser.add_argument('builddir', help='The directory to build the recipe in.')
+  args = parser.parse_args()
+  pkgpath = args.pkgpath
+  ignoreintegrity = args.ignoreintegrity
+  builddir = args.builddir
+  redownload = args.fresh
+
+  #pkgpath = sys.argv[1]
+  #builddir = sys.argv[2]
 
   status = "read_recipe"
   log(None, "READING RECIPE")
+  log(None, f"Arguemnts used: {args}")
   recipe = read_recipe(f"{pkgpath}/recipe.py")
 
   ctx = BuildContext(os.path.abspath(builddir), os.path.abspath(pkgpath), recipe)
@@ -159,7 +177,7 @@ if __name__ == "__main__":
 
   status = "download"
   log(None, "Downloading files")
-  skip_extracting = download_files(ctx, recipe)
+  skip_extracting = download_files(ctx, recipe, redownload)
 
   if "sha256sum" in recipe:
     status = "verification"
@@ -168,8 +186,10 @@ if __name__ == "__main__":
     if check_downloaded(ctx, recipe["sha256sum"]) == True:
       log(Colors.SUCCESS, f"☑ Integrity check passed.")
     else:
-      log(Colors.ERROR, f"!!!!!!!!!!!! INTEGRITY CHECK FAILED !!!!!!!!!!!!") #TODO: tell what file failed.
+      log(Colors.ERROR, f"!!!!!!!!!!!! INTEGRITY CHECK FAILED !!!!!!!!!!!!")
       log(Colors.ERROR, check_downloaded(ctx, recipe["sha256sum"]), " FAILED THE CHECKSUM")
+      if not(ignoreintegrity):
+        raise InvalidChecksumError("One or more file(s) did not pass the integrity check. Use -ii or -ignoreintegrity to bypass this error.")
   else:
     log(Colors.WARNING, f"// SHA256 checksum not found in recipe {recipe["pkgname"]}, extracting without checks.")
 
