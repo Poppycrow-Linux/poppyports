@@ -15,6 +15,7 @@ Not right now, the ports system is far from being finished.
 
 ## TODO
 - [X] Make a super basic python script
+- [ ] Add makedeps check and namedeps in general
 - [ ] Make a more elaborate compiling system
 - [ ] Sandbox the compiling process maybe??
 - [ ] Manage a temporary apk repo
