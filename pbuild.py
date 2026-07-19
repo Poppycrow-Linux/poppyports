@@ -40,8 +40,9 @@ class BuildContext: # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
   PKGDIR = None # this is package staging directory i.e. where it will be installed
   NPROC = 1
 
-  def __init__(self, builddir, recipe):
+  def __init__(self, builddir, portdir, recipe):
     self.BUILDDIR = builddir
+    self.PORTDIR = portdir
     self.SRCDIR = os.path.join(builddir, "pkgsrc")
     self.PKGDIR = os.path.join(builddir, "pkgdir")
     os.makedirs(self.SRCDIR, exist_ok=True)
@@ -63,14 +64,14 @@ class BuildContext: # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
     log(Colors.SH_COMMAND, f"+$ {' '.join(args)}")
     subprocess.run(args, cwd=cwd, env=self.env, check=True)
 
+  def cp(self, frm, to):
+    self.sh("cp", "-r", "-v", frm, to)
+
   def build(self):
     self.recipe["build"](self)
 
   def install(self):
     self.recipe["install"](self)
-
-  def cp(self, input, output):
-    raise RuntimeError("unimplemented")
 
 
 def read_recipe(path):
@@ -147,13 +148,13 @@ def extract_src(ctx, recipe):
 if __name__ == "__main__":
   # TODO: can somebody do argparse later? so we can do -o and whatever else
   pkgpath = sys.argv[1]
+  builddir = sys.argv[2]
 
   status = "read_recipe"
   log(None, "READING RECIPE")
   recipe = read_recipe(f"{pkgpath}/recipe.py")
 
-  # TODO: custom builddir. that way we can do packages in say build/pkg/lua and repo outputs in build/repo/lua.apk or wtv
-  ctx = BuildContext(f"{os.getcwd()}/build", recipe)
+  ctx = BuildContext(os.path.abspath(builddir), os.path.abspath(pkgpath), recipe)
   os.makedirs(ctx.BUILDDIR, exist_ok=True)
 
   status = "download"
@@ -189,8 +190,8 @@ if __name__ == "__main__":
     #env["LD_LIBRARY_PATH"] = "staging/apk-install/lib/x86_64-linux-gnu/"
     subprocess.run(["apk"] + list(args), env=os.environ, check=True)
 
+  outpath = f"{builddir}/{recipe['pkgname']}-{recipe['pkgver']}.apk"
   # the minimum you need to pass it seems?
-  outpath = f"{recipe['pkgname']}-{recipe['pkgver']}.apk"
   run_apk("mkpkg",
           "-I", f"name:{recipe["pkgname"]}",
           "-I", f"version:{recipe["pkgver"]}",
