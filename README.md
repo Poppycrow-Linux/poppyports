@@ -2,10 +2,23 @@
 This is the ports repository for [Poppycrow Linux](https://github.com/Poppycrow-Linux).
 Check [staging branch](https://github.com/Poppycrow-Linux/poppyports/tree/staging) for staging stuff
 
-## Syntax
-`pbuild.py path/to/recipe`
+## Usage
+usage: pbuild [-h] [-ignoreintegrity] [-fresh] pkgpath builddir
 
-example: `python pbuild.py main/lua`
+Compiles apk files to be used in Poppycrow Linux repos.
+```
+positional arguments:
+  pkgpath               Path of the folder that contains the build recipe.
+  builddir              The directory to build the recipe in.
+
+options:
+  -h, --help            show this help message and exit
+  -ignoreintegrity, -ii, -ignore-broken-files
+                        Ignore any checksum errors and continue building the package.
+  -fresh, -new, -redownload
+                        Redownload files even if they are already present and pass the
+                        integrity checks.
+```
 
 ##  What is ports?
 Ports is a repository of a packages you (or Github Actions) build. Think AUR or [cports](https://github.com/chimera-linux/cports) (shoutout to chimera linux they are awesome). 
