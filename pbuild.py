@@ -1,4 +1,4 @@
-# hi this is staging build system prototyping bullshit rn this is how you do apk 
+# hi this is staging build system prototyping bullshit rn this is how you do apk
 # i need to clean up - sam
 # TODO: handle depends and also like basically redo what chimera and APKBUILDs do
 # TODO: Everything.
@@ -69,7 +69,7 @@ class BuildContext: # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
   LDFLAGS = "" #"-Dick2"
   SRCDIR =  None # this is package source directory
   PKGDIR = os.getcwd() # this is package staging directory i.e. where it will be installed
-  
+
   def __init__(self, srcdir, pkgdir, recipe):
     self.SRCDIR = srcdir
     self.PKGDIR = pkgdir
@@ -79,7 +79,7 @@ class BuildContext: # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
     #self.env["DESTDIR"] = self.pkgdir
     #self.env["CFLAGS"] = self.CFLAGS
     pass
-  
+
   def sh(self, *args):
     cwd = self.SRCDIR
     print(f"{Colors.SHCOMMAND}+$ {' '.join(args)}{Colors.END}")
@@ -90,7 +90,7 @@ class BuildContext: # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
 
   def install(self):
     self.recipe["install"](self)
-  
+
   def cp(self, input, output):
     raise RuntimeError("unimplemented")
 
@@ -116,7 +116,7 @@ def download_files(ctx, recipe):
       urllib.request.urlretrieve(url, dest)
       print(f"I: Downloading {url} to {dest}")
     else: print("I:",dest, "already exists, skipping download!")
-    
+
 def calc_checksum(path, algorithm="sha256"):
     hasher = hashlib.new(algorithm)
     with open(path, "rb") as file:
@@ -161,7 +161,7 @@ if __name__ == "__main__":
 
   ctx = BuildContext(f"{os.getcwd()}/build/pkgsrc", f"{os.getcwd()}/build/pkgdir", recipe)
   os.makedirs("build", exist_ok=True)
-  
+
   status = "download"
   print("I: Downloading files")
   download_files(ctx, recipe)
@@ -194,7 +194,7 @@ if __name__ == "__main__":
     subprocess.run(["apk"] + list(args), env=os.environ, check=True)
 
   # the minimum you need to pass it seems?
-  run_apk("mkpkg", 
+  run_apk("mkpkg",
           "-I", f"name:{recipe["pkgname"]}",
           "-I", f"version:{recipe["pkgver"]}",
           "-F", ctx.PKGDIR,
@@ -204,7 +204,7 @@ if __name__ == "__main__":
 
 
 
-""" # this is old code 
+""" # this is old code
 # create data media
 def data_tar():
   buf = io.BytesIO()
