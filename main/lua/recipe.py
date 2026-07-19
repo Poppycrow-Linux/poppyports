@@ -6,7 +6,9 @@ url = "https://www.lua.org/"
 arch = "x86_64"
 license = "MIT"
 
+
 sources = [f"https://www.lua.org/ftp/{pkgname}-{pkgver}.tar.gz"]
+sha256sum = ["4f18ddae154e793e46eeab727c59ef1c0c0c2b744e7b94219710d76f530629ae"]
 depends = []
 
 

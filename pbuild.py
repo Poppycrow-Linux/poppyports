@@ -8,9 +8,14 @@ import io
 import subprocess
 import urllib.request
 import tarfile
+import hashlib
+status = "idle"
 
 # exceptions
 class InvalidRecipeError(Exception):
+  pass
+
+class InvalidChecksum(Exception):
   pass
 
 class BuildContext: # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
@@ -52,7 +57,7 @@ def read_recipe(path):
     exec(f.read(), recipe_def)
     # TODO: probably should move verifying to a seperate function
     invalid_keys = []
-    for key in ["sources", "pkgname", "build", "install", "arch"]:
+    for key in ["sources", "pkgname", "build", "install", "arch", "pkgver"]:
       if not key in recipe_def.keys():
         invalid_keys.append(key)
     if len(invalid_keys) >= 1:
@@ -63,29 +68,77 @@ def download_files(ctx, recipe):
   for url in recipe["sources"]:
     filename = url.split("/")[-1]
     dest = f"build/{filename}"
-    print(f"!! Down Loading {url} to {dest}")
+    print(f"I: Downloading {url} to {dest}")
     if not os.path.exists(dest):
       urllib.request.urlretrieve(url, dest)
+    else: print(os.path.exists(dest), "already exists, skipping download!")
     
-    print(f"!! tar xtracting")
-    with tarfile.open(dest, "r") as f:
-      os.makedirs(ctx.SRCDIR, exist_ok=True)
-      f.extractall(ctx.SRCDIR)
+def calc_checksum(path, algorithm="sha256"):
+    hasher = hashlib.new(algorithm)
+    with open(path, "rb") as file:
+        while chunk := file.read(8192):
+            hasher.update(chunk)
+    return hasher.hexdigest()
+
+def check_downloaded(shasum):
+  successes = []
+  files = []
+  fails = []
+  i = 0
+  for url in recipe["sources"]:
+      filename = url.split("/")[-1]
+      dest = f"build/{filename}"
+      files.append(dest)
+      successes.append(calc_checksum(dest) == shasum[i])
+  if not(False in successes):
+    return True
+  else:
+    for i in range(len(files)):
+      if not(successes[i]):
+        fails.append(files[i])
+    return fails
+
+
+def extract_src(ctx, recipe):
+    for url in recipe["sources"]:
+      filename = url.split("/")[-1]
+      dest = f"build/{filename}"
+      with tarfile.open(dest, "r") as f:
+        os.makedirs(ctx.SRCDIR, exist_ok=True)
+        f.extractall(ctx.SRCDIR)
 
 
 if __name__ == "__main__":
   pkgpath = sys.argv[1]
 
-  print("!! READING RECIPE")
+  status = "read_recipe"
+  print("I: READING RECIPE")
   recipe = read_recipe(f"{pkgpath}/recipe.py")
 
   ctx = BuildContext(f"{os.getcwd()}/build/pkgsrc", f"{os.getcwd()}/build/pkgdir", recipe)
   os.makedirs("build", exist_ok=True)
   
-  print("!! Download files")
+  status = "download"
+  print("I: Downloading files")
   download_files(ctx, recipe)
 
-  print("!! Ok running build")
+  if "sha256sum" in recipe:
+    status = "verification"
+    print("I: Checksum found in recipe, checking...")
+    if check_downloaded(recipe["sha256sum"]) == True:
+      print("I: ☑ Integrity check passed.")
+    else:
+      print("!!!!!!!!!!!! INTEGRITY CHECK FAILED !!!!!!!!") #TODO: tell what file failed.
+      print(check_downloaded(recipe["sha256sum"]), sep =" FAILED THE CHECKSUM\n", end = " FAILED THE CHECKSUM\n")
+  else:
+    print("!!!!!!!!!! SHA256 CHECKSUM NOT FOUND IN RECIPE", recipe["pkgname", " PROCEEDING TO EXTRACT WITHOUT CHECKS!!!!"])
+
+  status = "extract"
+  print("I: Xtracting the tar")
+  extract_src(ctx, recipe)
+
+  status = "build"
+  print("I: Ok running build")
   ctx.build()
   ctx.install()
 
@@ -103,7 +156,7 @@ if __name__ == "__main__":
           "-F", ctx.PKGDIR,
           "-o", f"{recipe['pkgname']}-{recipe['pkgver']}.apk")
 
-  print("!! done!!!!")
+  print("I: Done")
 
 
 

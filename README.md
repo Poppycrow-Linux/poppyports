@@ -2,6 +2,11 @@
 This is the ports repository for [Poppycrow Linux](https://github.com/Poppycrow-Linux).
 Check [staging branch](https://github.com/Poppycrow-Linux/poppyports/tree/staging) for staging stuff
 
+## Syntax
+`pbuild.py path/to/recipe`
+
+example: `python pbuild.py main/lua`
+
 ##  What is ports?
 Ports is a repository of a packages you (or Github Actions) build. Think AUR or [cports](https://github.com/chimera-linux/cports) (shoutout to chimera linux they are awesome). 
 
