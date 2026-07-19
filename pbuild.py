@@ -69,10 +69,12 @@ class BuildContext: # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
   LDFLAGS = "" #"-Dick2"
   SRCDIR =  None # this is package source directory
   PKGDIR = os.getcwd() # this is package staging directory i.e. where it will be installed
+  NPROC = 1
 
   def __init__(self, srcdir, pkgdir, recipe):
     self.SRCDIR = srcdir
     self.PKGDIR = pkgdir
+    self.NPROC = os.cpu_count() if os.cpu_count() is not None else 1
     self.env = os.environ.copy()
     self.ARCH = recipe["arch"]
     self.recipe = recipe
