@@ -109,13 +109,25 @@ def read_recipe(path):
     return recipe_def
 
 def download_files(ctx, recipe):
+  skip_extracting = False
   for url in recipe["sources"]:
-    filename = url.split("/")[-1]
-    dest = f"build/{filename}"
-    if not os.path.exists(dest):
-      urllib.request.urlretrieve(url, dest)
-      print(f"I: Downloading {url} to {dest}")
-    else: print("I:",dest, "already exists, skipping download!")
+    if url.startswith("https://") and not url.endswith(".git"):
+      filename = url.split("/")[-1]
+      dest = f"build/{filename}"
+      if not os.path.exists(dest):
+        urllib.request.urlretrieve(url, dest)
+        print(f"I: Downloading {url} to {dest}")
+      else: print("I:",dest, "already exists, skipping download!")
+    elif url.startswith("git://"): # TODO: add cloning from https git
+      skip_extracting = True
+      dest = f"{ctx.SRCDIR}/{recipe["pkgname"]}"
+      if not os.path.exists(dest):
+        print(f"I: Cloning {url} to {dest}")
+        #ctx.sh(f"git","clone","--depth 1",url,dest)
+        subprocess.run(("git","clone","--depth","1",url,dest),cwd=os.getcwd())
+      else: print("I:",dest, "already exists, skipping download!")
+  return skip_extracting
+
 
 def calc_checksum(path, algorithm="sha256"):
     hasher = hashlib.new(algorithm)
@@ -164,7 +176,7 @@ if __name__ == "__main__":
 
   status = "download"
   print("I: Downloading files")
-  download_files(ctx, recipe)
+  skip_extracting = download_files(ctx, recipe)
 
   if "sha256sum" in recipe:
     status = "verification"
@@ -177,9 +189,10 @@ if __name__ == "__main__":
   else:
     print(f"{Colors.WARNING}// SHA256 checksum not found in recipe {recipe["pkgname"]}, extracting without checks. {Colors.END}")
 
-  status = "extract"
-  print("I: Xtracting the tar")
-  extract_src(ctx, recipe)
+  if not skip_extracting:
+    status = "extract"
+    print("I: Xtracting the tar")
+    extract_src(ctx, recipe)
 
   status = "build"
   print("I: Ok running build")
