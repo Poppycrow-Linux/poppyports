@@ -1,2 +1,22 @@
 #!/bin/sh
+
+export PATH="$PATH:/usr/local/bin"
+
+mount -t devtmpfs /dev
+# i do not know why but it refuses to do this shit by itself
+mkdir /dev/pts /dev/shm
+mount -t devpts /dev/pts
+mount -t tmpfs /dev/shm
+mount -t proc /proc
+mount -t sysfs /sys
+mkdir /sys/fs/cgroup
+mount -t cgroup /sys/fs/cgroup
+mount -t tmpfs /run
+
+dmesg -n 1
+
+clear
+
+echo "Welcome to POPPYCROW LINUX"
+
 /bin/sh

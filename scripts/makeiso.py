@@ -7,12 +7,12 @@ recipe = {}
 with open("main/poppy-base/recipe.py", "r") as f:
   exec(f.read(), recipe)
 
-depends = recipe["depends"] + ["poppy-base"]
+depends = recipe["depends"] + ["main/poppy-base"]
 print(depends)
 
 for dep in depends:
   print(f"building {dep}")
-  subprocess.run(["python3", "pbuild.py", f"main/{dep}", f"build/pkg/{dep}"])
+  subprocess.run(["python3", "pbuild.py", f"{dep}", f"build/pkg/{dep}"])
   subprocess.run(["cp", "-a", f"build/pkg/{dep}/pkgdir/.", "build/rootfs/"])
 
 # TODO: print(f"generating apkindex")

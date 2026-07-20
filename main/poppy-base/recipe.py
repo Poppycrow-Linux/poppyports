@@ -8,10 +8,13 @@ license = "MIT"
 sources = []
 
 depends = [
-  "linux-stable",
-  "busybox",
-  "glibc",
-  "bash"
+  "main/linux-stable",
+  "main/busybox",
+  "main/glibc",
+  "main/bash",
+  "extra/nano",
+  "extra/fastfetch",
+  "extra/ncurses"
 ]
 
 def build(c):

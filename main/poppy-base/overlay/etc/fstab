@@ -1,0 +1,7 @@
+devtmpfs     /dev            devtmpfs   defaults,size=10%,mode=0755,nosuid,noexec  0  0
+proc         /proc           proc       defaults,nosuid,noexec,nodev               0  0
+sysfs        /sys            sysfs      defaults,nosuid,noexec,nodev               0  0
+cgroupfs     /sys/fs/cgroup  cgroupfs   defaults,nosuid,noexec,nodev               0  0
+tmpfs        /run            tmpfs      defaults,nosuid,noexec,nodev               0  0
+devpts       /dev/pts        devpts     defaults,nosuid,noexec,nodev               0  0
+tmpfs        /dev/shm        tmpfs      defaults,nosuid,noexec,nodev               0  0
