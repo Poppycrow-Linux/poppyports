@@ -170,6 +170,7 @@ if __name__ == "__main__":
   parser.add_argument('pkgpath', help='Path of the folder that contains the build recipe.')
   parser.add_argument('-ignoreintegrity', '-ii', '-ignore-broken-files', action='store_true', help='Ignore any checksum errors and continue building the package.')
   parser.add_argument('-fresh', '-new', '-redownload', action='store_true', help='Redownload files even if they are already present and pass the integrity checks.')
+  parser.add_argument('-rebuild', action='store_true', help='Force rebuild even when package is already built.')
   parser.add_argument('builddir', help='The directory to build the recipe in.')
   args = parser.parse_args()
   pkgpath = args.pkgpath
@@ -187,6 +188,12 @@ if __name__ == "__main__":
 
   ctx = BuildContext(os.path.abspath(builddir), os.path.abspath(pkgpath), recipe)
   os.makedirs(ctx.BUILDDIR, exist_ok=True)
+
+
+  outpath = f"{builddir}/{recipe['pkgname']}-{recipe['pkgver']}.apk"
+  if os.path.exists(outpath) and not args.rebuild:
+    log(Colors.WARNING, f"Skipping build as {outpath} already exists. If you need to rebuild, pass the -rebuild flag to force rebuilding.")
+    sys.exit(0)
 
   status = State.DOWNLOAD
   log(None, "Downloading files")
@@ -223,7 +230,6 @@ if __name__ == "__main__":
     #env["LD_LIBRARY_PATH"] = "staging/apk-install/lib/x86_64-linux-gnu/"
     subprocess.run(["apk"] + list(args), env=os.environ, check=True)
 
-  outpath = f"{builddir}/{recipe['pkgname']}-{recipe['pkgver']}.apk"
   # the minimum you need to pass it seems?
   run_apk("mkpkg",
           "-I", f"name:{recipe["pkgname"]}",
