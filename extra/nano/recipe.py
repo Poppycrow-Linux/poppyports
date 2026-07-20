@@ -5,7 +5,7 @@ pkgrel = 0
 pkgdesc = "The GNU Nano Text Editor"
 url = "https://www.nano-editor.org/"
 arch = "x86_64"
-license = "GPLv3"
+license = "GPL v3"
 
 
 sources = [f"https://www.nano-editor.org/dist/v9/{pkgname}-{pkgver}.tar.gz"]
