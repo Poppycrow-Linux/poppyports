@@ -8,7 +8,7 @@ license = "GPL v3 or later"
 
 
 sources = [f"https://ftp.gnu.org/gnu/{pkgname}/{pkgname}-{pkgver}.tar.gz"]
-#sha256sum = ["4f18ddae154e793e46eeab727c59ef1c0c0c2b744e7b94219710d76f530629ae"]
+sha256sum = ["0d5cd86965f869a26cf64f4b71be7b96f90a3ba8b3d74e27e8e9d9d5550f31ba"]
 depends = []
 
 
