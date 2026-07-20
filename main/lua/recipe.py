@@ -13,7 +13,7 @@ depends = []
 
 
 def build(c):
-  c.SRCDIR = c.SRCDIR + "/lua-5.4.8" # TODO fix this is because tar files have a top level name
+  c.SRCDIR = c.SRCDIR + f"/{pkgname}-{pkgver}" # TODO fix this is because tar files have a top level name
   c.sh("make", "linux", f"MYCFLAGS={c.CFLAGS}", f"MYLDFLAGS={c.LDFLAGS}")
 
 def install(c):
