@@ -1,10 +1,11 @@
+recipever = 0
 pkgname = "linux-stable"
 pkgver = "7.1.4"
 pkgrel = 0
 pkgdesc = "Linux Kernel (stable)"
 url = "https://kernel.org/"
 arch = "x86_64"
-license = "GPLv2"
+license = "GPL v2"
 
 sources = [f"https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-7.1.4.tar.xz"]
 depends = []

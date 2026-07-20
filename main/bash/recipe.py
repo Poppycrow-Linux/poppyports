@@ -1,3 +1,4 @@
+recipever = 0
 pkgname = "bash"
 pkgver = "5.3"
 pkgrel = 0

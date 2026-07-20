@@ -1,3 +1,4 @@
+recipever = 0
 pkgname = "fastfetch"
 pkgver = "2.66.0"
 pkgrel = 0

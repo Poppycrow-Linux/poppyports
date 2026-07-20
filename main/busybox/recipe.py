@@ -1,10 +1,11 @@
+recipever = 0
 pkgname = "busybox"
 pkgver = "1.0.0"
 pkgrel = 0
 pkgdesc = "better gnu coreutils"
 url = "https://www.busybox.net"
 arch = "x86_64"
-license = "GPLv2"
+license = "GPL v2"
 
 sources = ["git://busybox.net/busybox.git"]
 depends = []
