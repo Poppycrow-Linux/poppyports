@@ -60,6 +60,7 @@ class BuildContext: # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
     # TODO: this should be replaced with if checks
     self.ARCH = recipe["arch"]
     self.recipe = recipe
+    self.recipe["depends"] = [self.LIBC if pkg == "libc" else pkg for pkg in self.recipe["depends"]]
 
     self.env = os.environ.copy()
     #self.env["DESTDIR"] = self.pkgdir
