@@ -6,6 +6,7 @@ pkgdesc = "Free software emulation of curses in System V Release 4.0 (SVr4), and
 url = "https://invisible-island.net/ncurses/"
 arch = "x86_64"
 license = "MIT/X11"
+maintainer = "cachewave"
 
 
 sources = [f"https://ftp.gnu.org/gnu/ncurses/{pkgname}-{pkgver}.tar.gz"]
@@ -14,7 +15,7 @@ depends = []
 
 def build(c):
   c.SRCDIR = c.SRCDIR + f"/{pkgname}-{pkgver}"
-  c.sh("./configure")
+  c.sh("./configure","--enable-widec","--with-shared","--without-normal","--without-debug")
 
 def install(c):
-  c.sh("make", "install", f"DESTDIR={c.PKGDIR}")
+  c.sh("make", "install", f"DESTDIR={c.PKGDIR}", f"-j{c.NPROC}") # should be also symlinked to /lib64
