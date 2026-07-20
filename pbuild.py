@@ -44,6 +44,7 @@ class BuildContext: # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
   SRCDIR =  None # this is package source directory
   PKGDIR = None # this is package staging directory i.e. where it will be installed
   NPROC = 1
+  LIBC = ""
 
   def __init__(self, builddir, portdir, recipe):
     self.BUILDDIR = builddir
@@ -54,6 +55,7 @@ class BuildContext: # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
     os.makedirs(self.PKGDIR, exist_ok=True)    
     
     self.NPROC = os.cpu_count() if os.cpu_count() is not None else 1
+    self.LIBC = "glibc" # switch to musl to break everything TODO: package musl
     # i think this is wrong? ARCH would refer to our target architecture whereas recipe arch is the arch it can be built for
     # TODO: this should be replaced with if checks
     self.ARCH = recipe["arch"]
