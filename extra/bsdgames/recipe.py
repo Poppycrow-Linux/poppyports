@@ -13,6 +13,7 @@ depends = ["ncurses"]
 def build(c):
   c.SRCDIR = c.SRCDIR + f"/bsd-games-3.2" # TODO fix this is because tar files have a top level name
   c.sh("patch", "-p1", "-i", c.PORTDIR + "/fixup.patch")
+  c.sh("patch", "-p1", "-i", c.PORTDIR + "/ncurseswhack.patch")
   c.sh("./configure",f"--prefix={c.PKGDIR}/usr",f"--localstatedir={c.PKGDIR}/var/lib")
   c.sh("make")
 
