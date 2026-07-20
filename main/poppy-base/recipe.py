@@ -14,7 +14,7 @@ depends = [
   "main/bash",
   "extra/nano",
   "extra/fastfetch",
-  "main/ncurses"
+  #"main/ncurses"
 ]
 
 def build(c):
@@ -22,4 +22,8 @@ def build(c):
 
 def install(c):
   c.sh("chmod", "+x", f"{c.PORTDIR}/overlay/init") # make init executable
+  c.sh("mkdir","-p",f"{c.PORTDIR}/overlay/sys/fs/cgroup")
+  c.sh("mkdir","-p",f"{c.PORTDIR}/overlay/dev/pts")
+  c.sh("mkdir","-p",f"{c.PORTDIR}/overlay/dev/shm")
+  c.sh("mkdir","-p",f"{c.PORTDIR}/overlay/proc")
   c.cp(f"{c.PORTDIR}/overlay/.", c.PKGDIR)
