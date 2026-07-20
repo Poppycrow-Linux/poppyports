@@ -12,6 +12,10 @@ depends = []
 
 def build(c):
   c.SRCDIR = c.SRCDIR + f"/{pkgname}-{pkgver}"
+
+  # apply patches
+  c.sh("patch", "-p1", "-i", c.PORTDIR + "/001-fix-sysmount.patch")
+
   # because you cannot do in tree builds gnu fuck you
   c.sh("mkdir", "-p", c.SRCDIR + "/build")
   c.SRCDIR = c.SRCDIR + "/build"

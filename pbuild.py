@@ -151,7 +151,7 @@ if __name__ == "__main__":
   ignoreintegrity = False
   parser = argparse.ArgumentParser(
                     prog='pbuild',
-                    suggest_on_error=True,
+                    #suggest_on_error=True, # this doesn't work on my python 3.13
                     description='Compiles apk files to be used in Poppycrow Linux repos.',
                     epilog='See more @ github.com/Poppycrow-Linux/poppyports/')
   parser.add_argument('pkgpath', help='Path of the folder that contains the build recipe.')
@@ -169,7 +169,7 @@ if __name__ == "__main__":
 
   status = "read_recipe"
   log(None, "READING RECIPE")
-  log(None, f"Arguemnts used: {args}")
+  log(None, f"Arguments used: {args}")
   recipe = read_recipe(f"{pkgpath}/recipe.py")
 
   ctx = BuildContext(os.path.abspath(builddir), os.path.abspath(pkgpath), recipe)

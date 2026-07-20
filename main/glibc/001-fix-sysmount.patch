@@ -1,0 +1,19 @@
+--- glibc-2.42/sysdeps/unix/sysv/linux/sys/mount.h      2025-07-28 20:22:55.000000000 +0200
++++ glibc-b/sysdeps/unix/sysv/linux/sys/mount.h 2026-07-20 10:20:45.138327785 +0200
+@@ -265,9 +265,16 @@
+ #define FSOPEN_CLOEXEC          0x00000001
+ 
+ /* open_tree flags.  */
++#ifndef OPEN_TREE_CLONE
+ #define OPEN_TREE_CLONE    1         /* Clone the target tree and attach the clone */
++#endif
++#ifndef O_CLOEXEC
++# include <bits/cloexec.h>
++# define O_CLOEXEC __O_CLOEXEC
++#endif
++#ifndef OPEN_TREE_CLOEXEC
+ #define OPEN_TREE_CLOEXEC  O_CLOEXEC /* Close the file on execve() */
+-
++#endif
+ 
+ __BEGIN_DECLS
