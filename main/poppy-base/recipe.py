@@ -26,4 +26,5 @@ def install(c):
   c.sh("mkdir","-p",f"{c.PORTDIR}/overlay/dev/pts")
   c.sh("mkdir","-p",f"{c.PORTDIR}/overlay/dev/shm")
   c.sh("mkdir","-p",f"{c.PORTDIR}/overlay/proc")
-  c.cp(f"{c.PORTDIR}/overlay/.", c.PKGDIR)
+  c.sh("bash", f"{c.PORTDIR}/overlay/")
+  c.cp("bash", f"{c.PORTDIR}/populate_rootfs.sh")
