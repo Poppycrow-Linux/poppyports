@@ -15,8 +15,7 @@ def build(c):
   c.sh("make", "defconfig")
   #sed -e 's/.*TC.*/CONFIG_TC=n/' -i .config
   c.sh("sed","-e","s/CONFIG_TC=y/CONFIG_TC=n/g","-i",".config") # disable tc to avoid bug TODO: FIX HACK HACK BUG
-  c.sh
-  c.sh("make", "-j4")
+  c.sh("make", f"-j{c.NPROC}")
 
 def install(c):
   c.sh("make",f"CONFIG_PREFIX={c.PKGDIR}","install")

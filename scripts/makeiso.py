@@ -21,7 +21,9 @@ for dep in depends:
 
 
 print("generating initramfs")
-subprocess.run("find . -print0 | cpio -o -H newc > ../ramfs.img", cwd="build/rootfs/", shell=True)
+#cd initramfs && (find . | cpio -o -H newc -R root:root > ../init.cpio) && cd ..
+subprocess.run("find . | cpio -o -H newc -R root:root > ../init.cpio", cwd="build/rootfs/", shell=True)
+
 
 print("generating isoroot")
 os.makedirs("build/isoroot/boot/grub/", exist_ok=True)
@@ -31,10 +33,10 @@ with open("build/isoroot/boot/grub/grub.cfg", 'w') as f:
 set default=0
 menuentry "poppycrow" {
   linux /boot/bzImage
-  initrd /boot/ramfs.img
+  initrd /boot/init.cpio
 }""")
 
 subprocess.run(["cp", "-v", "build/rootfs/boot/bzImage", "build/isoroot/boot/bzImage"])  
-subprocess.run(["cp", "-v", "build/ramfs.img", "build/isoroot/boot/ramfs.img"])  
+subprocess.run(["cp", "-v", "build/init.cpio", "build/isoroot/boot/init.cpio"])
 
 subprocess.run(["grub-mkrescue", "-o", "build/poppycrow.iso", "build/isoroot"])
