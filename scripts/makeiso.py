@@ -7,7 +7,7 @@ recipe = {}
 with open("main/poppy-base/recipe.py", "r") as f:
   exec(f.read(), recipe)
 
-depends = recipe["depends"] + ["main/poppy-base"]
+depends = ["main/poppy-base"] + recipe["depends"]
 print(depends)
 
 for dep in depends:
