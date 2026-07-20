@@ -18,4 +18,4 @@ def build(c):
 
 def install(c):
   c.sh("chmod", "+x", f"{c.PORTDIR}/overlay/init") # make init executable
-  c.cp(f"{c.PORTDIR}/overlay/*", c.PKGDIR)
+  c.cp(f"{c.PORTDIR}/overlay/.", c.PKGDIR)
