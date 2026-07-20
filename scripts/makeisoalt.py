@@ -31,6 +31,7 @@ subprocess.run(("mkdir","-p","build/rootfs/sys/fs/cgroup"))
 subprocess.run(("mkdir","-p","build/rootfs/dev/pts"))
 subprocess.run(("mkdir","-p","build/rootfs/dev/shm"))
 subprocess.run(("mkdir","-p","build/rootfs/proc"))
+subprocess.run(("mkdir","-p","build/rootfs/run"))
 subprocess.run(("mkdir","-p","build/rootfs/usr/sbin"))
 subprocess.run(("mkdir","-p","build/rootfs/usr/bin"))
 subprocess.run(("mkdir","-p","build/rootfs/usr/lib"))
@@ -41,7 +42,7 @@ subprocess.run(("ln","-s","usr/sbin","sbin"),cwd=os.getcwd()+"/build/rootfs")
 subprocess.run(("ln","-s","usr/lib","lib"),cwd=os.getcwd()+"/build/rootfs")
 subprocess.run(("ln","-s","usr/lib32","lib32"),cwd=os.getcwd()+"/build/rootfs")
 subprocess.run(("ln","-s","usr/lib64","lib64"),cwd=os.getcwd()+"/build/rootfs")
-subprocess.run(("cp","-r","-v","main/poppy-base/overlay/.","build/rootfs/"))
+subprocess.run(("rsync","-r","-v","main/poppy-base/overlay/.","build/rootfs/"))
 
 
 for dep in depends:
