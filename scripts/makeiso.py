@@ -21,7 +21,7 @@ for dep in depends:
 
 
 print("generating initramfs")
-subprocess.run("find . -print0 | cpio --null -ov --format=newc | gzip > ../ramfs.img", cwd="build/rootfs/", shell=True)
+subprocess.run("find . -print0 | cpio -o -H newc > ../ramfs.img", cwd="build/rootfs/", shell=True)
 
 print("generating isoroot")
 os.makedirs("build/isoroot/boot/grub/", exist_ok=True)
