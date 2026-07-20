@@ -4,7 +4,7 @@ pkgrel = 0
 pkgdesc = "Fastfetch is a neofetch-like tool for fetching system information and displaying it in a visually appealing way."
 url = "https://github.com/fastfetch-cli/fastfetch"
 arch = "x86_64"
-license = "GPL v3 or later"
+license = "MIT"
 
 
 sources = [f"{url}/archive/refs/tags/{pkgver}.tar.gz"]
