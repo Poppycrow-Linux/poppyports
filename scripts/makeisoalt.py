@@ -47,7 +47,7 @@ subprocess.run(("cp","-r","-v","main/poppy-base/overlay/.","build/rootfs/"))
 for dep in depends:
   print(f"building {dep}")
   subprocess.run(["python3", "pbuild.py", f"{dep}", f"build/pkg/{dep}"])
-  subprocess.run(["rsync", "-r", "-l", "-K", f"build/pkg/{dep}/pkgdir/.", "build/rootfs/"])
+  subprocess.run(["rsync", "-r", "-l", "-K", "-H", f"build/pkg/{dep}/pkgdir/.", "build/rootfs/"])
 
 # TODO: print(f"generating apkindex")
 #       do this in build/repo/APKINDEX.tar.gz

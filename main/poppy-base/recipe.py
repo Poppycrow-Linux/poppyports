@@ -14,7 +14,7 @@ depends = [
   "main/bash",
   "extra/nano",
   "extra/fastfetch",
-  #"main/ncurses"
+  "main/ncurses"
 ]
 
 def build(c):
