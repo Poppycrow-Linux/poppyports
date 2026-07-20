@@ -11,6 +11,9 @@ import urllib.request
 import tarfile
 import hashlib
 import argparse
+
+REQUIRED_KEYS = {"sources", "pkgname", "build", "install", "arch", "pkgver"} #this is capitalized because thats the idiomatic way to do consts in python guy guys  guys -QV
+
 status = "idle"  # valera what is this for ???
 
 # exceptions
@@ -80,13 +83,12 @@ def read_recipe(path):
   with open(path, "r") as f:
     recipe_def = {}
     exec(f.read(), recipe_def)
-    # TODO: probably should move verifying to a seperate function
-    invalid_keys = []
-    for key in ["sources", "pkgname", "build", "install", "arch", "pkgver"]:
-      if not key in recipe_def.keys():
-        invalid_keys.append(key)
-    if len(invalid_keys) >= 1:
-      raise InvalidRecipeError(f"This recipe is missing the {", ".join(invalid_keys)} key(s)!")
+    # TODO: probably should move verifying to a seperate function   
+    # does this still need to be moved? i feel like its short enough now -QV
+    recipe_keys = recipe_def.keys()
+    missing_keys = REQUIRED_KEYS - recipe_keys #this is set subtraction 
+    if missing_keys:
+      raise InvalidRecipeError(f"This recipe is missing the {", ".join(missing_keys)} key(s)!")
     return recipe_def
 
 def download_files(ctx, recipe, redownload):
