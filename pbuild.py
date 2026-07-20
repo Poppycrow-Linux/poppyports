@@ -11,10 +11,18 @@ import urllib.request
 import tarfile
 import hashlib
 import argparse
+from enum import Enum
 
 REQUIRED_KEYS = {"sources", "pkgname", "build", "install", "arch", "pkgver"} #this is capitalized because thats the idiomatic way to do consts in python guy guys  guys -QV
 
-status = "idle"  # valera what is this for ???
+class State(Enum):
+  IDLE = 0
+  READ = 1
+  DOWNLOAD = 2
+  VERIFY = 3
+  EXTRACT = 4
+  BUILD = 5
+status = State.IDLE  # valera what is this for ??? # idk balera loves bibecoding but i made it slightly better with an enum i  guess -QV
 
 # exceptions
 class InvalidRecipeError(Exception):
@@ -172,7 +180,7 @@ if __name__ == "__main__":
   #pkgpath = sys.argv[1]
   #builddir = sys.argv[2]
 
-  status = "read_recipe"
+  status = State.READ
   log(None, "READING RECIPE")
   log(None, f"Arguments used: {args}")
   recipe = read_recipe(f"{pkgpath}/recipe.py")
@@ -180,12 +188,12 @@ if __name__ == "__main__":
   ctx = BuildContext(os.path.abspath(builddir), os.path.abspath(pkgpath), recipe)
   os.makedirs(ctx.BUILDDIR, exist_ok=True)
 
-  status = "download"
+  status = State.DOWNLOAD
   log(None, "Downloading files")
   skip_extracting = download_files(ctx, recipe, redownload)
 
   if "sha256sum" in recipe:
-    status = "verification"
+    status = State.VERIFY
     log(None, "Checksum found in recipe, checking...")
     
     if check_downloaded(ctx, recipe["sha256sum"]) == True:
@@ -196,15 +204,15 @@ if __name__ == "__main__":
       if not(ignoreintegrity):
         raise InvalidChecksumError("One or more file(s) did not pass the integrity check. Use -ii or -ignoreintegrity to bypass this error.")
   else:
-    log(Colors.WARNING, f"// SHA256 checksum not found in recipe {recipe["pkgname"]}, extracting without checks.")
+    log(Colors.WARNING, f"//// SHA256 checksum not found in recipe {recipe["pkgname"]}, extracting without checks. ////")
 
   if not skip_extracting:
-    status = "extract"
-    log(None, "Xtracting the tar")
+    status = State.EXTRACT
+    log(None, "Extracting source...")
     extract_src(ctx, recipe)
 
-  status = "build"
-  log(None, "Ok running build")
+  status = State.BUILD
+  log(None, "Building...")
   ctx.build()
   ctx.install()
 
