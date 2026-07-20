@@ -4,7 +4,7 @@ pkgrel = 0
 pkgdesc = "pkg-config is a helper tool used when compiling applications and libraries."
 url = "https://www.freedesktop.org/wiki/Software/pkg-config/"
 arch = "x86_64"
-license = "GPLv2 or later"
+license = "GPL v2 or later"
 
 sources = [f"https://{pkgname}.freedesktop.org/releases/{pkgname}-{pkgver}.tar.gz"]
 sha256sum = ['6fc69c01688c9458a57eb9a1664c9aba372ccda420a02bf4429fe610e7e7d591']

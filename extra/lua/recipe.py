@@ -1,3 +1,4 @@
+recipever = 0
 pkgname = "lua"
 pkgver = "5.4.8"
 pkgrel = 0
