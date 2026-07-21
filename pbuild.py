@@ -11,10 +11,19 @@ import urllib.request
 import tarfile
 import hashlib
 import argparse
+import time
+import threading
 from enum import Enum
 
 REQUIRED_KEYS = {"sources", "pkgname", "build", "install", "arch", "pkgver"} #this is capitalized because thats the idiomatic way to do consts in python guy guys  guys -QV
 
+
+start_time = time.time()
+total_time = 0 #ms
+last_time = 0 
+time_spent_on_state = 0 # ms
+time_spent = {} # state to ms
+stop_event = threading.Event()
 class State(Enum):
   IDLE = 0
   READ = 1
@@ -22,7 +31,30 @@ class State(Enum):
   VERIFY = 3
   EXTRACT = 4
   BUILD = 5
-status = State.IDLE  # valera what is this for ??? # idk balera loves bibecoding but i made it slightly better with an enum i  guess -QV
+  DONE = 6
+
+status = State.IDLE
+def change_status(target:State):
+  global time_spent
+  global last_time
+  global status
+  time_spent[status] = time_spent_on_state
+  last_time = total_time
+  
+
+  status = target
+
+def passive_timer():
+    global time_spent_on_state
+    global total_time
+    while not stop_event.is_set():
+        total_time = 1000*(time.time() - start_time)
+        time_spent_on_state = total_time - last_time
+        time.sleep(0.1)
+
+timer_thread = threading.Thread(target=passive_timer, daemon=True)
+timer_thread.start()
+  
 
 # exceptions
 class InvalidRecipeError(Exception):
@@ -38,7 +70,7 @@ class Colors:
   WARNING = "\x1b[5;30;103m"
   SUCCESS = "\x1b[0;97;48;5;28m"
   SH_COMMAND = "\x1b[0;97;48;5;21m"
-  END = "\033[0m"
+  END = "\x1b[0m"
 
 def log(color: Colors, *args):
   print(f"{color if color is not None else ''}I:", *args, Colors.END)
@@ -126,6 +158,31 @@ def download_files(ctx, recipe, redownload):
   return skip_extracting
 
 
+def build_state_breakdown():
+  def truncate(num, places):
+      if places == 0:
+          return str(int(num))
+      s = str(num)
+      if 'e' in s or 'E' in s:
+          s = f"{num:.15f}"
+      before_dec, after_dec = s.split('.')
+      return f"{before_dec}.{after_dec[:places]}"
+
+  global time_spent
+  result = ""
+  for s,t in time_spent.items():
+    measurement = "ms"
+    divisor = 1
+    if t > 60000:
+      measurement = "min"
+      divisor = 60000
+    elif t > 1000: #seconds
+      measurement = "s"
+      divisor = 1000
+    result += f"{s.name}: {truncate(t/divisor, 5)} ({measurement})\n"
+  return result
+
+
 def calc_checksum(path, algorithm="sha256"):
   hasher = hashlib.new(algorithm)
   with open(path, "rb") as file:
@@ -181,7 +238,7 @@ if __name__ == "__main__":
   #pkgpath = sys.argv[1]
   #builddir = sys.argv[2]
 
-  status = State.READ
+  change_status(State.READ)
   log(None, "READING RECIPE")
   log(None, f"Arguments used: {args}")
   recipe = read_recipe(f"{pkgpath}/recipe.py")
@@ -195,12 +252,12 @@ if __name__ == "__main__":
     log(Colors.WARNING, f"Skipping build as {outpath} already exists. If you need to rebuild, pass the -rebuild flag to force rebuilding.")
     sys.exit(0)
 
-  status = State.DOWNLOAD
+  change_status(State.DOWNLOAD)
   log(None, "Downloading files")
   skip_extracting = download_files(ctx, recipe, redownload)
 
   if "sha256sum" in recipe:
-    status = State.VERIFY
+    change_status(State.VERIFY)
     log(None, "Checksum found in recipe, checking...")
     
     if check_downloaded(ctx, recipe["sha256sum"]) == True:
@@ -214,11 +271,11 @@ if __name__ == "__main__":
     log(Colors.WARNING, f"//// SHA256 checksum not found in recipe {recipe["pkgname"]}, extracting without checks. ////")
 
   if not skip_extracting:
-    status = State.EXTRACT
+    change_status(State.EXTRACT)
     log(None, "Extracting source...")
     extract_src(ctx, recipe)
 
-  status = State.BUILD
+  change_status(State.BUILD)
   log(None, "Building...")
   ctx.build()
   ctx.install()
@@ -236,8 +293,14 @@ if __name__ == "__main__":
           "-I", f"version:{recipe["pkgver"]}",
           "-F", ctx.PKGDIR,
           "-o", outpath)
+  change_status(State.DONE)
 
   log(Colors.SUCCESS, f"Done! Generated {outpath}")
+  stop_event.set()
+  print()
+  log(Colors.SUCCESS, "Build State Breakdown:")
+  print()
+  print(build_state_breakdown())
 
 
 
