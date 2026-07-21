@@ -16,9 +16,10 @@ depends = []
 
 
 def build(c):
+  
   c.SRCDIR = c.SRCDIR + f"/{pkgname}-{pkgver}"
-  c.sh("meson","setup",f"--prefix={c.PKGDIR}/usr", f"{c.PKGDIR}/")
-  c.sh("ninja", "-C", f"{c.PKGDIR}/")
+  c.sh("meson","setup",f"--prefix={c.PKGDIR}/usr", f"build/")
+  c.sh("ninja", "-C", f"build/")
 
 def install(c):
-  c.sh("sudo", "ninja", "-C", f"{c.PKGDIR}/", "install")
+  c.sh("ninja", "-C", f"build/", "install")
