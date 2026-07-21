@@ -17,7 +17,8 @@ depends = [
   "main/ncurses",
   "extra/bsdgames",
   "main/wayland",
-  "extra/figlet"
+  "extra/figlet",
+  "main/libinput"
 ]
 
 def build(c):
