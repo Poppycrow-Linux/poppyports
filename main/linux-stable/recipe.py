@@ -13,6 +13,7 @@ depends = []
 def build(c):
   c.SRCDIR = c.SRCDIR + "/linux-7.1.4" # TODO fix this is because tar files have a top level name
   c.sh("make", "defconfig")
+  c.cp(f"{c.PORTDIR}/.config",f"{c.SRCDIR}/.config")
   c.sh("make",f"-j{c.NPROC}","LLVM=1")
 
 def install(c):
