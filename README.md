@@ -18,6 +18,8 @@ options:
   -fresh, -new, -redownload
                         Redownload files even if they are already present and pass the
                         integrity checks.
+  -rebuild
+                        Rebuilds even the packages that were previously compiled.
 ```
 
 ##  What is ports?
