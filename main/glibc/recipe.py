@@ -13,6 +13,8 @@ depends = []
 
 def build(c):
   c.SRCDIR = c.SRCDIR + f"/{pkgname}-{pkgver}"
+  c.env["CC"] = "gcc"
+  c.env["CXX"] = "g++"
 
   # apply patches
   c.sh("patch", "-p1", "-i", c.PORTDIR + "/001-fix-sysmount.patch")
