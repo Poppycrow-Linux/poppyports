@@ -19,3 +19,7 @@ def build(c):
 
 def install(c):
   c.sh("make", "install", f"DESTDIR={c.PKGDIR}", f"-j{c.NPROC}") # should be also symlinked to /lib64
+  c.SRCDIR = c.PKGDIR + "/usr/lib" # hack because sh doesnt allow to set cwd
+  c.sh("ln","-s","libtinfow.so.6.6","libtinfo.so.6")
+  c.sh("ln","-s","libtinfow.so.6.6","libtinfo.so")
+  c.sh("ln","-s","libtinfow.so.6.6","libtinfo.so.6.6")
