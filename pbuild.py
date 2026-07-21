@@ -13,6 +13,7 @@ import hashlib
 import argparse
 import time
 import threading
+import configparser
 from enum import Enum
 
 REQUIRED_KEYS = {"sources", "pkgname", "build", "install", "arch", "pkgver"} #this is capitalized because thats the idiomatic way to do consts in python guy guys  guys -QV
@@ -24,6 +25,9 @@ last_time = 0
 time_spent_on_state = 0 # ms
 time_spent = {} # state to ms
 stop_event = threading.Event()
+supressnonerrorlogs = False #set as a global variable so the log function would Know
+color = True # same as above
+
 class State(Enum):
   IDLE = 0
   READ = 1
@@ -55,7 +59,6 @@ def passive_timer():
 timer_thread = threading.Thread(target=passive_timer, daemon=True)
 timer_thread.start()
   
-
 # exceptions
 class InvalidRecipeError(Exception):
   pass
@@ -63,6 +66,29 @@ class InvalidRecipeError(Exception):
 class InvalidChecksumError(Exception):
   pass
 
+# this one needs a bit of backstory
+# argparse's store true or store false, quite obviously, returns false if not present or true if present
+# however, this creates a problem where we cannot know when to fallback to the config, since false means that the option is just not present
+# what if we generally want to ignore integrity errors, but not this time, for example?
+# this class is an argparse action that makes the argument true if it is present at all or specified like --argument true
+# if the value is absent, it returns none
+# if it is explicitly set to false like --arg False, then it's false
+# None means we fall back to config
+class OptionalBoolAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        if values is None:
+            setattr(namespace, self.dest, True)
+            return
+
+        v = str(values).lower()
+        if v in {"true", "1", "yes", "on"}:
+            setattr(namespace, self.dest, True)
+        elif v in {"false", "0", "no", "off"}:
+            setattr(namespace, self.dest, False)
+        else:
+            raise argparse.ArgumentTypeError(
+                f"invalid boolean value for {option_string}: {values}"
+            )
 
 # ANSI colors and printing
 class Colors:
@@ -72,8 +98,9 @@ class Colors:
   SH_COMMAND = "\x1b[0;97;48;5;21m"
   END = "\x1b[0m"
 
-def log(color: Colors, *args):
-  print(f"{color if color is not None else ''}I:", *args, Colors.END)
+def log(clr: Colors, *args):
+    if (supressnonerrorlogs and (clr in {Colors.SUCCESS, Colors.ERROR, Colors.WARNING})) or not(supressnonerrorlogs):
+      print(f"{clr if (clr is not None and color) else ''}I:", *args, Colors.END)
 
 
 class BuildContext: # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
@@ -218,22 +245,69 @@ def extract_src(ctx, recipe):
 
 
 if __name__ == "__main__":
-  ignoreintegrity = False
   parser = argparse.ArgumentParser(
                     prog='pbuild',
                     #suggest_on_error=True, # this doesn't work on my python 3.13
                     description='Compiles apk files to be used in Poppycrow Linux repos.',
                     epilog='See more @ github.com/Poppycrow-Linux/poppyports/')
   parser.add_argument('pkgpath', help='Path of the folder that contains the build recipe.')
-  parser.add_argument('-ignoreintegrity', '-ii', '-ignore-broken-files', action='store_true', help='Ignore any checksum errors and continue building the package.')
-  parser.add_argument('-fresh', '-new', '-redownload', action='store_true', help='Redownload files even if they are already present and pass the integrity checks.')
-  parser.add_argument('-rebuild', action='store_true', help='Force rebuild even when package is already built.')
-  parser.add_argument('builddir', help='The directory to build the recipe in.')
+  parser.add_argument('-ignoreintegrity', '-ii', '-ignore-broken-files', action = OptionalBoolAction, help='Ignore any checksum errors and continue building the package.', nargs = "?")
+  parser.add_argument('-fresh', '-new', '-redownload', action = OptionalBoolAction, help='Redownload files even if they are already present and pass the integrity checks.', nargs = "?")
+  parser.add_argument('-rebuild', action = OptionalBoolAction, help='Force rebuild even when package is already built.', nargs = "?")
+  parser.add_argument('-color', action = OptionalBoolAction, help='Highlight warnings, errors and build completion.', nargs = "?")
+  parser.add_argument('-supressnonerrorlogs', '-clean-logs', action = OptionalBoolAction, help="Supress logs that aren't warnings, errors, or completion messages", nargs = "?")
+  parser.add_argument('builddir', help='The directory to build the recipe in.', nargs = "?")
+  parser.add_argument('-config', help='The config to use.', nargs = "?")
   args = parser.parse_args()
-  pkgpath = args.pkgpath
-  ignoreintegrity = args.ignoreintegrity
-  builddir = args.builddir
-  redownload = args.fresh
+
+
+  CONFIGFILEPATH = "./pbuild.conf"
+  if args.config: # parse configfilepath earlier than the rest so we can override it
+    CONFIGFILEPATH = args.config
+
+
+  # fallback variables
+
+  ignoreintegrity = False
+  color = True
+  rebuild = False
+  supressnonerrorlogs = False
+
+  #TODO: move config reading to a separate function
+
+  configparser = configparser.ConfigParser()
+  configparser.read(CONFIGFILEPATH)
+  if configparser.sections() == []:
+        configparser['Build'] = {"AssumeRebuild" : "no",
+                      "AssumeRedownload" : "no",
+                      "DefaultBuildPath" : "./build",
+                      "AssumeRebuild" : "no",
+                      "AssumeIgnoreIntegrity" : "no"
+                        }
+        configparser['Display'] = {"Color" : "yes",
+                        "SupressNonErrorLogs" : "no"
+                        }
+        configfile = open(CONFIGFILEPATH, 'w')
+
+  if os.path.getsize(CONFIGFILEPATH) == 0: ## create and write default config if it is missing
+    configparser.write(configfile) ## TODO: write default config sections if missing. maybe not needed (question Mark), since the defaults are kind of above
+
+  ignoreintegrity = configparser.getboolean('Build', 'AssumeIgnoreIntegrity')
+  redownload = configparser.getboolean('Build', 'AssumeRedownload')
+  builddir = configparser['Build']['DefaultBuildPath']
+  color = configparser.getboolean('Display', 'Color')
+  supressnonerrorlogs = configparser.getboolean('Display', 'SupressNonErrorLogs')
+  rebuild = configparser.getboolean('Build', 'AssumeRebuild')
+
+
+
+
+  if (args.pkgpath != None): pkgpath = args.pkgpath # ifs added so that cmdline functions cannot override shit when they are not set
+  if (args.ignoreintegrity != None): ignoreintegrity = args.ignoreintegrity
+  if (args.builddir != None): builddir = args.builddir
+  if (args.color != None): color = args.color
+  if (args.fresh != None): redownload = args.fresh
+  if (args.supressnonerrorlogs != None): supressnonerrorlogs = args.supressnonerrorlogs
 
   #pkgpath = sys.argv[1]
   #builddir = sys.argv[2]
