@@ -11,6 +11,7 @@ When contributing, make sure you stick to these simple rules:
 - Any hypr* utility
 - Any Brave Browser edition (including Brave Origin)
 - SonicDE
+- OperaGX
 - Any LLM-related apps (LM Studio, Claude Code, opencode, etc)
 - Abandonware (i. e. neofetch, pfetch, or anything that might rely on an older version of a library the package depends on) 
 - Any application with license that forbids binary distribution (i. e. aseprite) This ban will hopefully be lifted in future once we make an apk wrapper that would be able to invoke pbuild and then install the package. 
