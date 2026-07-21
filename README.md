@@ -36,5 +36,10 @@ Not right now, the ports system is far from being finished.
 - [ ] Manage a temporary apk repo
 - [ ] Make the system be able to work with Github Actions and also forward things to our own server so we can actually host things.
 
+## Building the kernel with rootfs
+`python3 scripts/makeisoworse.py`
+
+NOTE: DOESN'T MAKE A DISC IMAGE FOR NOW
+
 ## Subtitles?
 subtitles by DimaTorzok
