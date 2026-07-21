@@ -16,7 +16,8 @@ depends = [
   "extra/fastfetch",
   "main/ncurses",
   "extra/bsdgames",
-  "main/wayland"
+  "main/wayland",
+  "extra/figlet"
 ]
 
 def build(c):
