@@ -134,13 +134,30 @@ class BuildContext: # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
     #self.env["CFLAGS"] = self.CFLAGS
     pass
 
-  def sh(self, *args):
-    cwd = self.SRCDIR
+  def sh(self, *args, cwd=None):
+    if cwd is None: cwd = self.SRCDIR
+
+    # if one arg is provided assume shell
+    shell = False
+    if len(args) < 1: shell = True
+
     log(Colors.SH_COMMAND, f"+$ {' '.join(args)}")
-    subprocess.run(args, cwd=cwd, env=self.env, check=True)
+    subprocess.run(args, cwd=cwd, env=self.env, check=True, shell=shell)
+
 
   def cp(self, frm, to):
     self.sh("cp", "-r", "-v", frm, to)
+
+  def lnk(self, frm, to):
+    self.sh("ln", "-s", frm, to)
+
+  def apply_patches(self):
+    patchdir = self.PORTDIR + "/patches"
+    if not os.path.exists(patchdir): return # no patches to apply
+    for path, dirs, files in os.walk(patchdir):
+      for patch in files:
+        self.sh("patch", "-p1", "-i", f"{path}/{patch}")
+
 
   def build(self):
     self.recipe["build"](self)
