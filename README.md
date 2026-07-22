@@ -1,6 +1,5 @@
 ## What is this repo?
-This is the ports repository for [Poppycrow Linux](https://github.com/Poppycrow-Linux).
-Check [staging branch](https://github.com/Poppycrow-Linux/poppyports/tree/staging) for staging stuff
+This is the ports repository for [Poppycrow Linux](https://codeberg.org/Poppycrow-Linux).
 
 ## Usage
 usage: pbuild [-h] [-ignoreintegrity] [-fresh] pkgpath builddir
