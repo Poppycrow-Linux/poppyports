@@ -4,8 +4,8 @@
 This is the ports repository for [Poppycrow Linux](https://codeberg.org/Poppycrow-Linux).
 
 ###  What are ports?
-Ports are a repository of a packages you (or a CI server) build, with optional configuration changes and patches applied beforehand. This system is directly inspired
-from the ports system found on Free and OpenBSD, but inspiration for our incarnation of the system was largely taken from [Chimera Linux](https://chimera-linux.org/)'s cports.
+Ports is a repository of a packages you (or a CI server) build, with optional configuration changes and patches applied beforehand. This system is directly inspired
+from the ports system found on FreeBSD and OpenBSD, but inspiration for our incarnation of the system was largely taken from [Chimera Linux](https://chimera-linux.org/)'s cports.
 
 ###  Can I add software [xyz] to ports?
 Not right now, the ports system is far from being finished.
@@ -14,13 +14,14 @@ Not right now, the ports system is far from being finished.
 
 Our build system, pbuild, sources packages directly from their upstream, verifies their SHA signature, and then builds them into an APK package.
 Optionally, the user may also supply patches that are then applied onto the extracted sources before they are compiled. Some packages, such as extra/figlet,
-come with their own Poppycrow provided patches, that provide distro-specific features and support.  
+come with their own Poppycrow provided patches that provide distro-specific features and support.  
 
 ### Usage
+```
 usage: pbuild [-h] [-ignoreintegrity] [-fresh] pkgpath builddir
 
 Compiles apk files to be used in Poppycrow Linux repos.
-```
+
 positional arguments:
   pkgpath               Path of the folder that contains the build recipe.
   builddir              The directory to build the recipe in.
@@ -38,7 +39,6 @@ options:
 
 
 ## TODO
-- [X] Make a super basic python script
 - [ ] Add makedeps check and makedeps in general
 - [ ] Make a more elaborate compiling system
 - [ ] Sandbox the compiling process maybe??
