@@ -301,13 +301,14 @@ if __name__ == "__main__":
 
 
 
-
   if (args.pkgpath != None): pkgpath = args.pkgpath # ifs added so that cmdline functions cannot override shit when they are not set
   if (args.ignoreintegrity != None): ignoreintegrity = args.ignoreintegrity
   if (args.builddir != None): builddir = args.builddir
   if (args.color != None): color = args.color
   if (args.fresh != None): redownload = args.fresh
   if (args.supressnonerrorlogs != None): supressnonerrorlogs = args.supressnonerrorlogs
+  if (args.rebuild != None): rebuild = args.rebuild
+
 
   #pkgpath = sys.argv[1]
   #builddir = sys.argv[2]
@@ -322,7 +323,7 @@ if __name__ == "__main__":
 
 
   outpath = f"{builddir}/{recipe['pkgname']}-{recipe['pkgver']}.apk"
-  if os.path.exists(outpath) and not args.rebuild:
+  if os.path.exists(outpath) and not rebuild:
     log(Colors.WARNING, f"Skipping build as {outpath} already exists. If you need to rebuild, pass the -rebuild flag to force rebuilding.")
     sys.exit(0)
 
