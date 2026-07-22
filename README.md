@@ -1,7 +1,22 @@
-## What is this repo?
+# Poppycrow Linux Ports
+
+### What is this repo?
 This is the ports repository for [Poppycrow Linux](https://codeberg.org/Poppycrow-Linux).
 
-## Usage
+###  What are ports?
+Ports are a repository of a packages you (or a CI server) build, with optional configuration changes and patches applied beforehand. This system is directly inspired
+from the ports system found on Free and OpenBSD, but inspiration for our incarnation of the system was largely taken from [Chimera Linux](https://chimera-linux.org/)'s cports.
+
+###  Can I add software [xyz] to ports?
+Not right now, the ports system is far from being finished.
+
+## The build system
+
+Our build system, pbuild, sources packages directly from their upstream, verifies their SHA signature, and then builds them into an APK package.
+Optionally, the user may also supply patches that are then applied onto the extracted sources before they are compiled. Some packages, such as extra/figlet,
+come with their own Poppycrow provided patches, that provide distro-specific features and support.  
+
+### Usage
 usage: pbuild [-h] [-ignoreintegrity] [-fresh] pkgpath builddir
 
 Compiles apk files to be used in Poppycrow Linux repos.
@@ -21,11 +36,6 @@ options:
                         Rebuilds even the packages that were previously compiled.
 ```
 
-##  What is ports?
-Ports is a repository of a packages you (or Github Actions) build. Think AUR or [cports](https://github.com/chimera-linux/cports) (shoutout to chimera linux they are awesome). 
-
-##  Can I add software [xyz] to ports?
-Not right now, the ports system is far from being finished.
 
 ## TODO
 - [X] Make a super basic python script
@@ -36,9 +46,12 @@ Not right now, the ports system is far from being finished.
 - [ ] Make the system be able to work with Github Actions and also forward things to our own server so we can actually host things.
 
 ## Building the kernel with rootfs
+We provide our own build script for a patched kernel with a rootfs image:
+
 `python3 scripts/makeisoworse.py`
 
-NOTE: DOESN'T MAKE A DISC IMAGE FOR NOW
+(Please note, in this early development stage, this script does not build a bootable ISO. You must boot it with qemu-system manually.)
+
 
 ## Subtitles?
 subtitles by DimaTorzok
