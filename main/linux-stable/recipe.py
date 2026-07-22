@@ -15,6 +15,7 @@ def build(c):
   c.sh("make", "defconfig")
   c.cp(f"{c.PORTDIR}/.config",f"{c.SRCDIR}/.config")
   c.sh("make",f"-j{c.NPROC}","LLVM=1")
+  #c.sh("make","modules_install",f"-j{c.NPROC}")
 
 def install(c):
   c.sh("mkdir", "-p", f"{c.PKGDIR}/boot")
