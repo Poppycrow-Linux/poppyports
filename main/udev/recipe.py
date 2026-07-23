@@ -53,12 +53,12 @@ def install(c):
     c.env["DESTDIR"] = c.PKGDIR
 
     c.sh("ninja", "-C", "build", "install")
-    c.sh("mkdir", "-p", "/tmp/udev-keep/usr/bin", "/tmp/udev-keep/usr/lib", "/tmp/udev-keep/usr/include")
+    c.sh("mkdir", "-p", "/tmp/udev-keep/usr/bin", "/tmp/udev-keep/usr/lib/pkgconfig", "/tmp/udev-keep/usr/include")
 
     c.sh("cp", "-a", c.PKGDIR + "/usr/bin/udevadm", "/tmp/udev-keep/usr/bin/")
     c.sh("cp", "-a", c.PKGDIR + "/usr/lib/libudev.so*", "/tmp/udev-keep/usr/lib/")
     c.sh("cp", "-a", c.PKGDIR + "/usr/include/libudev.h", "/tmp/udev-keep/usr/include/")
-    c.sh("cp", "-a", c.PKGDIR + "/usr/lib/pkgconfig/libudev.pc", "/tmp/udev-keep/usr/lib/")
+    c.sh("cp", "-a", c.PKGDIR + "/usr/lib/pkgconfig/libudev.pc", "/tmp/udev-keep/usr/lib/pkgconfig")
 
     if c.sh("test", "-d", c.PKGDIR + "/usr/lib/udev"):
         c.sh("cp", "-a", c.PKGDIR + "/usr/lib/udev", "/tmp/udev-keep/usr/lib/")
