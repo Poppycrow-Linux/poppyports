@@ -135,14 +135,13 @@ class BuildContext: # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
     pass
 
   def sh(self, *args, cwd=None, shell=False):
-    if cwd is None: cwd = self.SRCDIR
+    if cwd is None:    cwd = self.SRCDIR
+    if len(args) == 1: shell = True
 
-    if len(args) < 1:
-      shell = True
-
+    # shell=True requires a string to be passed in i assume
     cmd = ' '.join(args) if shell else args
 
-    log(Colors.SH_COMMAND, f"+$ {' '.join(args) if not isinstance(args, str) else args}")
+    log(Colors.SH_COMMAND, f"+$ {' '.join(args) if isinstance(cmd, tuple) else cmd}")
     subprocess.run(cmd, cwd=cwd, env=self.env, check=True, shell=shell)
 
 
