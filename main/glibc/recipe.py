@@ -7,6 +7,8 @@ url = "https://gnu.org/"
 arch = "x86_64"
 license = "GPL v2"
 
+sbu = 13.2
+
 # the reason 2.42 is used rn is because this is the one debian has and links with for me
 sources = [f"https://ftp.gnu.org/gnu/{pkgname}/{pkgname}-{pkgver}.tar.xz"]
 depends = []

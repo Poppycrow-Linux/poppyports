@@ -7,6 +7,8 @@ url = "https://wayland.freedesktop.org/"
 arch = "x86_64"
 license = "MIT"
 
+sbu = 0.1
+
 sources = [f"https://gitlab.freedesktop.org/wayland/wayland/-/archive/1.26.0/wayland-1.26.0.tar.gz"]
 depends = []
 

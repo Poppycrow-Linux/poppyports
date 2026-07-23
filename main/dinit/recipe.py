@@ -7,6 +7,7 @@ url = "https://github.com/davmac314/dinit"
 arch = "x86_64"
 license = "Apache v2"
 
+sbu = 0.5
 
 # https://github.com/davmac314/dinit/archive/refs/tags/v0.22.1.tar.gz
 sources = [f"{url}/archive/refs/tags/v{pkgver}.tar.gz"]

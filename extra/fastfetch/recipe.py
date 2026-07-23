@@ -7,6 +7,8 @@ url = "https://github.com/fastfetch-cli/fastfetch"
 arch = "x86_64"
 license = "MIT"
 
+sbu = 0.9
+
 
 sources = [f"{url}/archive/refs/tags/{pkgver}.tar.gz"]
 sha256sum = ["547883c2f0dbc85a4545d4533f5b812fbc4c8ffe1271056de18b51994acbf474"]

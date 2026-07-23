@@ -7,6 +7,7 @@ url = "https://github.com/libffi/libffi"
 arch = "x86_64"
 license = "https://github.com/libffi/libffi/blob/master/LICENSE"
 
+sbu = 0.3
 
 sources = [f"{url}/archive/refs/tags/v{pkgver}.tar.gz"]
 sha256sum = ['df80a3ff1d3421ac2ae0e368575f82f30383f932481ecf2dd1d5f7f88c92f547']
