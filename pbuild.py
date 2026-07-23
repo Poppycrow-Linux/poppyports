@@ -137,8 +137,7 @@ class BuildContext: # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
   def sh(self, *args, cwd=None, shell=False):
     if cwd is None: cwd = self.SRCDIR
 
-    # if  any wildcard thingamagics. jank as fuck idc
-    if len(args) == 1 or any(any(char in str(arg) for char in "*?<>|") for arg in args):
+    if len(args) == 1:
       shell = True
 
     cmd = ' '.join(args) if shell else args
