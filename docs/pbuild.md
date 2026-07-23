@@ -1,59 +1,58 @@
-# about pbuild
-hello! this is meant to serve as a guide for contributors, people looking to make recipes, and people who want to understand the architecture of pbuild. basically everything pbuild related goes here.
-please note our project is rapidly revolving and information you find here may be outdated/incorrect. as always, source code is the best documentation.
+# About pbuild
+Hello! This is meant to serve as a guide for contributors, people looking to make recipes, and people who want to understand the architecture of pbuild. Basically everything pbuild related goes here.
+Please note our project is rapidly revolving and information you find here may be outdated/incorrect. As always, source code is the best documentation.
 
-to put it simply, pbuild does one thing: build one package from one recipe. it is spiritually closer to something like alpine's [abuild](https://wiki.alpinelinux.org/wiki/Abuild_and_Helpers), with the benefit of it being written in python as opposed to a amalgamation of C and bash, and also uses python scripts as recipes as opposed to APKBUILDs.
+To put it simply, pbuild does one thing: build one package from one recipe. It is spiritually closer to something like alpine's [abuild](https://wiki.alpinelinux.org/wiki/Abuild_and_Helpers), with the benefit of it being written in python as opposed to an amalgamation of C and bash, and also uses python scripts as recipes as opposed to APKBUILDs.
 
-## recipes
-recipes are called recipes because they tell the computer how to "bake" the package.
-i (sam) designed them to be kind of similar to APKBUILDs so they're easier to grasp and also mechanically port from alpine's ports.
-you can reuse some of the concepts from [APKBUILD's reference](https://wiki.alpinelinux.org/wiki/APKBUILD_Reference) to construct recipes.
+## Recipes
+Recipes are called recipes because they tell the computer how to "bake" the package.
+I (Sam) designed them to be kind of similar to APKBUILDs so they're easier to grasp and also mechanically port from alpine's ports.
+You can reuse some of the concepts from [APKBUILD's reference](https://wiki.alpinelinux.org/wiki/APKBUILD_Reference) to construct recipes.
 
-the idea of using python recipes was borrowed from chimera's [cports](https://github.com/chimera-linux/cports), which have their own cbuild system.
+The idea of using python recipes was borrowed from chimera's [cports](https://github.com/chimera-linux/cports), which have their own cbuild system.
+
+Below, I describe the valid variables for recipes:
+
+Please note this is not a final spec, and still under extensive development.
+
+- `recipever`: Version of the recipe schema (still experimental, leave at 0)
+
+- `pkgname`: Full name for the package. Passed to apkpkg and used to fetch sources from upstream.
+- `pkgver`: Version of the software being packaged. Passed to apkpkg and used to fetch sources from upstream.
+- `pkgrel`: Package release number, similar to APKBUILD pkgrel.
+- `pkgdesc`: A brief description of the package and what it does. 
+- `url`: The homepage for the package.
+- `arch`: CPU architecture for the package to be built to, such as x86_64, aarch64, etc... Similar to APKBUILD arch.
+- `license`: License used for the source code of the package.
+
+- `sources`: List of remote source links to download and untar. We currently support HTTP and Git, but we would recommend using HTTP tarballs as they provide a stable checksum to compare against.
+- `sha256sum`: List of sha256sums. Usually a 1:1 map between sources (i.e. sources[0] is checked against sha256sum[0]). Used for checking remote file integrity.
+- `depends`: List of packages the recipe depends on at RUNTIME. (check apk runtime resolving)
+- `makedepends`: list of packages the recipe depends on at BUILD-TIME. (TODO)
+
+- `provides`: A list of "apps" the package provides, used to calculate conflicts. For example, if packages `foo` and `bar` both provide `baz`, they will conflict.
+
+- `build(c)`: Compilation stage of the package. Both build prep and compiling happen here.
+- `install(c)`: Installation/packaging stage of the package. This should install the final distributable files to `PKGDIR`.
 
 
-below, i describe the valid variables for recipes:
+Let's talk about the `c` variable, or `ctx`, or `BuildContext`.
+The BuildContext provides the recipe with context regarding the environment it's running in, and functional/variable helpers for building packages.
 
-please note this is not a final spec and is rapidly changing
+Here's some of the variables you'll likely use. you can access them within `build` and `install` via the first argument:
 
-- `recipever`: recipe version (? this is experimental)
+- `PORTDIR`: Refers to the directory the port/recipe is in (like `main/apk/`)
+- `SRCDIR`: Fefers to the directory where sources were installed and extracted (`pkgsrc`)
+- `PKGDIR`: Fefers to the install directory whose files will be packaged into a `.apk` file (`pkgdir`)
 
-- `pkgname`: full name for the package, used in apk when constructing and repos (via apk mkpkg and such).
-- `pkgver`: version of the software being packaged (passed in to apk package as well)
-- `pkgrel`: package release number. similar to APKBUILD pkgrel
-- `pkgdesc`: brief package description
-- `url`: homepage for the package
-- `arch`: package architecture to build for (x86, x86_64, all, noarch)... similar to APKBUILD arch
-- `license`: distribution license of the package
-
-- `sources`: list of remote source links to download and untar. we currently support HTTP and git, but i would recommend using http tarballs as they provide a stable checksum to compare against.
-- `sha256sum`: list of sha256sums. usually a 1:1 map between sources (i.e. sources[0] is checked against sha256sum[0]), is used for checking remote file integrity.
-- `depends`: list of packages the recipe depends on for RUN-TIME (check apk runtime resolving)
-- `makedepends`: list of packages the recipe depends on BUILD-TIME (TODO)
-
-- `provides`: list of package names (or files?) this package provides (check APKBUILD provides) (TODO)
-
-- `build(c)`: compilation stage of the package. Both build prep and compiling happen here.
-- `install(c)`: installation/packaging stage of the package. This should install the final distributable files to `PKGDIR`.
-
-
-let's talk about the `c` variable, or `ctx`, or `BuildContext`.
-the BuildContext provides the recipe with context regarding the environment it's running in, and functional/variable helpers for building packages.
-
-here's some of the variables you'll likely use. you can access them within `build` and `install` via the first argument:
-
-- `PORTDIR`: refers to the directory the port/recipe is in (like `main/apk/`)
-- `SRCDIR`: refers to the directory where sources were installed and extracted (`pkgsrc`)
-- `PKGDIR`: refers to the install directory whose files will be packaged into a `.apk` file (`pkgdir`)
-
-- `ARCH`: refers to the target systems architecture
+- `ARCH`: Refers to the target system's architecture
 - `CFLAGS/CXXFLAGS/LDFLAGS`: user defined(?) flags for C/C++/LD
-- `NPROC`: get available os core count
-- `LIBC`: refers to our current libc (experimental, currently just `"glibc"`)
+- `NPROC`: Returns nproc from the system, or how many logical cores the system has.
+- `LIBC`: Refers to our current libc (experimental, currently just `"glibc"`)
 ---
 
-- `recipe`: circular reference to the current recipe
-- `env`: refers to the environment variables of the context, for things like `sh` and etc.
+- `recipe`: Recursive reference to the current recipe
+- `env`: Refers to the environment variables of the context, for things like `sh` and etc.
 
-- `sh(*args, cwd=None)`: runs a command with args. if there is only one argument, it invokes the first one via the shell. if cwd=None, it defaults to `SRCDIR`.
-- `apply_patches()`: tries to apply patches from `$PORTDIR/patches` inside of `SRCDIR`
+- `sh(*args, cwd=None)`: Run a command with args. If there is only one argument, it invokes the first one via the shell. If cwd = None, it defaults to `SRCDIR`.
+- `apply_patches()`: Try to apply patches from `$PORTDIR/patches` inside of `SRCDIR`.
