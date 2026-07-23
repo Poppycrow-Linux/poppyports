@@ -18,7 +18,8 @@ depends = [
   "extra/bsdgames",
   "main/wayland",
   "extra/figlet",
-  "main/libinput"
+  "main/libinput",
+  "main/udev",
 ]
 
 def build(c):
