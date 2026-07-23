@@ -10,3 +10,6 @@ build/
 *.apk
 .env*
 
+__pycache__/
+*.pyc
+
