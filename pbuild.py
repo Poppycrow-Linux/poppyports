@@ -137,7 +137,7 @@ class BuildContext: # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
   def sh(self, *args, cwd=None, shell=False):
     if cwd is None: cwd = self.SRCDIR
 
-    if len(args) == 1:
+    if len(args) < 1:
       shell = True
 
     cmd = ' '.join(args) if shell else args
