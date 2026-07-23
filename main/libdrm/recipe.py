@@ -20,7 +20,7 @@ def build(c):
     c.SRCDIR = c.SRCDIR + f"/{yuck}"
     c.sh(
         "meson", "setup", f"{c.SRCDIR}", f"build/",
-        f"--prefix={c.PKGDIR}/usr"
+        f"--prefix={c.PKGDIR}/usr",
         "-Dudev=true",
         "-Dvalgrind=disabled",
         "--reconfigure"

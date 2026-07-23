@@ -19,7 +19,10 @@ depends = [
   "main/wayland",
   "extra/figlet",
   "main/libinput",
-  "main/udev",
+  "main/dinit",
+  "main/libffi",
+  "main/libdrm",
+  "main/libxkbcommon"
 ]
 
 def build(c):
