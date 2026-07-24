@@ -4,8 +4,7 @@ pkgver = "2.19.1"
 pkgrel = 0
 pkgdesc = "libwacom is a library to identify graphics tablets and their model-specific \
 features. It provides easy access to information such as \"is this a built-in \
-on-screen tablet\", \"what is the size of this model\", etc. \
-"
+on-screen tablet\", \"what is the size of this model\", etc."
 url = "https://linuxwacom.github.io/libwacom/"
 arch = "x86_64"
 license = "MIT"
