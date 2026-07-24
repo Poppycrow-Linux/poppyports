@@ -12,10 +12,10 @@ depends = [""]
 
 def build(c):
   c.SRCDIR = c.SRCDIR + f"/NetHack-5.0.0" 
-  c.sh("./sys/unix/setup.sh", f"./sys/unix/hints/linux-minimal")
+  c.sh("./sys/unix/setup.sh", f"./sys/unix/hints/linux.500")
  # c.sh("./configure",f"--prefix={c.PKGDIR}/usr",f"--localstatedir={c.PKGDIR}/var/lib")
   c.sh("make", "fetch-lua")
-  c.sh("make")
+  c.sh("make", f"-j{c.NPROC}")
 
 def install(c):
-  c.sh("make", "install")
+  c.sh("make", "install", f"PREFIX={c.PKGDIR}/var")
