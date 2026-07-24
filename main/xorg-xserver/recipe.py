@@ -1,5 +1,5 @@
 recipever = 0
-pkgname = "x11"
+pkgname = "xorg-xserver"
 pkgver = "21.1.24"
 pkgrel = 0
 pkgdesc = "Demonspawn"
