@@ -15,20 +15,26 @@ Below, I describe the valid variables for recipes:
 
 Please note this is not a final spec, and still under extensive development.
 
-- `recipever`: Version of the recipe schema (still experimental, leave at 0)
+- `recipever`: Version of the recipe schema, used for backwards compatability when breaking changes happen (still experimental, leave at 0)
 
 - `pkgname`: Full name for the package. Passed to apkpkg and used to fetch sources from upstream.
 - `pkgver`: Version of the software being packaged. Passed to apkpkg and used to fetch sources from upstream.
-- `pkgrel`: Package release number, similar to APKBUILD pkgrel.
+- `pkgrel`: Package release number, similar to APKBUILD pkgrel, most commonly used for a hotfix that doesn't change pkgver.
 - `pkgdesc`: A brief description of the package and what it does. 
 - `url`: The homepage for the package.
 - `arch`: CPU architecture for the package to be built to, such as x86_64, aarch64, etc... Similar to APKBUILD arch.
 - `license`: License used for the source code of the package.
 
-- `sources`: List of remote source links to download and untar. We currently support HTTP and Git, but we would recommend using HTTP tarballs as they provide a stable checksum to compare against.
+- `sources`: List of remote source links to download and untar. We currently support HTTP and Git, but we would recommend using HTTP tarballs as they provide a stable checksum to compare against. Also it's encouraged to use formatted strings like f"{url}/download/{pkgname}-{pkgver}.tar.gz", so updating packages becomes as simple as changing the pkgver. Do note, however, that sometimes it might be needed to append "http://" or "https://" in certain cases, so if your file doesn't even try to download (the logs show download state, yet no files were downloaded and the extract utility refers to a missing file), then you could try doing that.
 - `sha256sum`: List of sha256sums. Usually a 1:1 map between sources (i.e. sources[0] is checked against sha256sum[0]). Used for checking remote file integrity.
 - `depends`: List of packages the recipe depends on at RUNTIME. (check apk runtime resolving)
-- `makedepends`: list of packages the recipe depends on at BUILD-TIME. (TODO)
+- `makedepends`: List of packages the recipe depends on at BUILD-TIME. (TODO)
+
+
+- `optdepends`: List of packages that the package optionally depends on, at runtime. Since the package is assumed to be built with all functionally relevant functions enabled, optdepends are also usually required to build it. This isn't used by apk itself, but it's a future thing for an apk wrapper that will add some QoL improvements.
+- `is_group`: Used to distinguish between groups (like `poppy-base`), and normal packages, as groups in APK are crudely implemented via empty packages with all the group memebers listed as dependencies. This field will help a future APK wrapper. Assumed false by default.
+- `prefer_split`: Another field for the APK wrapper. Makes it write the separate members of the group (dependencies) as separate world entries by default, as opposed to just adding the package. This has the benefit of being able to uninstall a member of the group (for example `konqueror` from group `plasma`) without touching other members of the group. This option mostly makes sense for something like desktop environments, where the need for certain packages is debated.
+
 
 - `provides`: A list of "apps" the package provides, used to calculate conflicts. For example, if packages `foo` and `bar` both provide `baz`, they will conflict.
 
