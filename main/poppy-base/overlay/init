@@ -4,6 +4,7 @@ export PATH="$PATH:/usr/local/bin"
 
 mount -t devtmpfs /dev
 # i do not know why but it refuses to do this shit by itself
+#maybe because you dont have an init system genius
 mkdir /dev/pts /dev/shm
 mount -t devpts /dev/pts
 mount -t tmpfs /dev/shm
@@ -17,6 +18,6 @@ dmesg -n 1
 
 clear
 
-echo "Welcome to POPPYCROW LINUX"
+figlet "Welcome to POPPYCROW LINUX"
 
 /bin/sh
