@@ -17,6 +17,7 @@ depends = [
   "main/ncurses",
   "main/zlib",
   "main/wayland",
+  "main/x11",
 
   "extra/bsdgames",
   "extra/figlet",
