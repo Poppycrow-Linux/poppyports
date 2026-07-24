@@ -15,7 +15,7 @@ def build(c):
   c.sh("patch", "-p1", "-i", c.PORTDIR + "/fixup.patch")
   c.sh("patch", "-p1", "-i", c.PORTDIR + "/ncurseswhack.patch")
   c.sh("./configure",f"--prefix={c.PKGDIR}/usr",f"--localstatedir={c.PKGDIR}/var/lib")
-  c.sh("make")
+  c.sh("make", f"-j{c.NPROC}")
 
 def install(c):
   c.sh("make", "install")

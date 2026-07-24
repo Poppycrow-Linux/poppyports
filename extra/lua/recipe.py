@@ -15,7 +15,7 @@ depends = []
 
 def build(c):
   c.SRCDIR = c.SRCDIR + f"/{pkgname}-{pkgver}" # TODO fix this is because tar files have a top level name
-  c.sh("make", "linux", f"MYCFLAGS={c.CFLAGS}", f"MYLDFLAGS={c.LDFLAGS}")
+  c.sh("make", "linux", f"MYCFLAGS={c.CFLAGS}", f"MYLDFLAGS={c.LDFLAGS}", f"-j{c.NPROC}")
 
 def install(c):
   c.sh("make", "install", f"INSTALL_TOP={c.PKGDIR}/usr")

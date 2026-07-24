@@ -8,7 +8,7 @@ arch = "x86_64"
 license = "NetHack License"
 
 sources = [f"https://www.nethack.org/download/5.0.0/nethack-500-src.tgz"] #Yes, you really have to hardcode this--because they tag versions like this
-depends = [""] 
+depends = ["ncurses"] 
 
 def build(c):
   c.SRCDIR = c.SRCDIR + f"/NetHack-5.0.0" 
