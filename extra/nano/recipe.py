@@ -16,7 +16,7 @@ makedepends = ["autoconf", "automake", "autopoint", "gcc", "gettext", "git", "gr
 
 def build(c):
   c.SRCDIR = c.SRCDIR + f"/{pkgname}-{pkgver}"
-  c.sh("./configure")
+  c.sh("./configure", "--prefix=/usr")
 
 def install(c):
   c.sh("make", "install", f"DESTDIR={c.PKGDIR}")

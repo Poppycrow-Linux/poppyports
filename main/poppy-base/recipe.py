@@ -17,7 +17,9 @@ depends = [
   "main/ncurses",
   "main/zlib",
   "main/wayland",
-  "main/x11",
+  "main/apk",
+  "main/openssl"
+  "main/x11-server",
 
   "extra/bsdgames",
   "extra/figlet",

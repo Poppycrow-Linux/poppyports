@@ -18,13 +18,12 @@ def build(c):
 # meson setup -Dprefix=/ build
 # ninja -C build
 # meson install -C build
-  # valera pls fix the build directory is not the install dir i'm too lazy to fix
 
-  c.SRCDIR = c.SRCDIR + f"/{pkgname}-v{pkgver}" # TODO fix this is because tar files have a top level name
-  c.sh("meson", "setup", f"-Dprefix={c.PKGDIR}", f"{c.PKGDIR}")
-  c.sh("ninja", "-C", f"{c.PKGDIR}")
+  c.SRCDIR = c.SRCDIR + f"/{pkgname}-v{pkgver}"
+  c.sh("meson", "setup", f"-Dprefix={c.PKGDIR}", "-Dzstd=disabled", "build/")
+  c.sh("ninja", "-C", "build/")
   ####c.sh("make", f"MYCFLAGS={c.CFLAGS}", f"MYLDFLAGS={c.LDFLAGS}")
 
 def install(c):
-  c.sh("meson", "install", "-C", f"{c.PKGDIR}")
+  c.sh("meson", "install", "-C", "build/")
   #c.sh("make", "install", f"DESTDIR={c.PKGDIR}") # bash adds its own /usr for some reason

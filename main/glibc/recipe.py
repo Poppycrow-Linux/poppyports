@@ -1,3 +1,4 @@
+# NOTE: whatever glibc we're building is shipping a ton of shit, i guess were building for debug? idk
 recipever = 0
 pkgname = "glibc"
 pkgver = "2.42"

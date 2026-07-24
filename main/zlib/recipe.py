@@ -17,4 +17,4 @@ def build(c):
   c.sh("make", f"-j{c.NPROC}")
 
 def install(c):
-  c.sh("make", "install", f"DESTDIR={c.PKGDIR}/usr")
+  c.sh("make", "install", f"DESTDIR={c.PKGDIR}")
