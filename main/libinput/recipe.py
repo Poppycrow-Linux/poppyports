@@ -13,7 +13,7 @@ sbu = 0.2
 
 sources = [f"https://gitlab.com/freedesktop-sdk/mirrors/freedesktop/libinput/libinput/-/archive/{pkgver}/{pkgname}-{pkgver}.tar.gz?ref_type=tags"]
 sha256sum = ["b6749bf6f1890f6631c0a70a027c35fec9d2e096a39f720548896e41474a9854"]
-depends = []
+depends = ["libwacom"]
 
 
 def build(c):
