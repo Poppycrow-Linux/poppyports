@@ -7,6 +7,8 @@ url = "https://github.com/cmatsuoka/figlet"
 arch = "x86_64"
 license = "BSD3"
 
+sbu = 0.0
+
 
 sources = [f"https://github.com/cmatsuoka/figlet/archive/refs/tags/{pkgver}.tar.gz"]
 depends = ['glibc']

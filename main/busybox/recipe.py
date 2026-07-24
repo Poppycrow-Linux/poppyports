@@ -7,6 +7,8 @@ url = "https://www.busybox.net"
 arch = "x86_64"
 license = "GPL v2"
 
+sbu = 1.4
+
 sources = ["https://busybox.net/downloads/busybox-1.38.0.tar.bz2"]
 depends = []
 

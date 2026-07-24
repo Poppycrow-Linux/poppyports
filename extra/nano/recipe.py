@@ -7,6 +7,7 @@ url = "https://www.nano-editor.org/"
 arch = "x86_64"
 license = "GPL v3"
 
+sbu = 0.7
 
 sources = [f"https://www.nano-editor.org/dist/v9/{pkgname}-{pkgver}.tar.gz"]
 sha256sum = ["2647a33f3c2ff3dc45168aeccff61abc7eae8bf99ac1d35574175c23bde6050b"]

@@ -1,5 +1,8 @@
 #  Poppycrow Linux Ports
 
+## Important!!!
+[Codeberg](https://codeberg.org/Poppycrow-Linux/poppyports) is the main repo for poppyports. Any issues or pull requests should be submitted there instead of the mirrors (Github, etc)
+
 ### What is this repo?
 This is the ports repository for [Poppycrow Linux](https://codeberg.org/Poppycrow-Linux).
 
@@ -18,7 +21,7 @@ come with their own Poppycrow provided patches that provide distro-specific feat
 
 ### Usage
 ```
-usage: pbuild [-h] [-ignoreintegrity] [-fresh] pkgpath builddir
+usage: pbuild [-h] [-ignoreintegrity [IGNOREINTEGRITY]] [-fresh [FRESH]] [-rebuild [REBUILD]] [-color [COLOR]] [-supressnonerrorlogs [SUPRESSNONERRORLOGS]] [-config [CONFIG]] pkgpath [builddir]
 
 Compiles apk files to be used in Poppycrow Linux repos.
 
@@ -28,13 +31,15 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
-  -ignoreintegrity, -ii, -ignore-broken-files
+  -ignoreintegrity, -ii, -ignore-broken-files [true/false]
                         Ignore any checksum errors and continue building the package.
-  -fresh, -new, -redownload
-                        Redownload files even if they are already present and pass the
-                        integrity checks.
-  -rebuild
-                        Rebuilds even the packages that were previously compiled.
+  -fresh, -new, -redownload [true/false]
+                        Redownload files even if they are already present and pass the integrity checks.
+  -rebuild [true/false]    Force rebuild even when package is already built.
+  -color [true/false]        Highlight warnings, errors and build completion.
+  -supressnonerrorlogs, -clean-logs [true/false]
+                        Supress logs that aren't warnings, errors, or completion messages
+  -config [PATH]      The config to use.
 ```
 
 

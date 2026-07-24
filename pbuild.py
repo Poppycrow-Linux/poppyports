@@ -134,15 +134,16 @@ class BuildContext: # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
     #self.env["CFLAGS"] = self.CFLAGS
     pass
 
-  def sh(self, *args, cwd=None):
-    if cwd is None: cwd = self.SRCDIR
+  def sh(self, *args, cwd=None, shell=False):
+    if cwd is None:    cwd = self.SRCDIR
+    if len(args) == 1: shell = True
 
-    # if one arg is provided assume shell
-    shell = False
-    if len(args) < 1: shell = True
+    # shell=True requires a string to be passed in i assume
+    cmd = ' '.join(args) if shell else args
 
-    log(Colors.SH_COMMAND, f"+$ {' '.join(args)}")
-    subprocess.run(args, cwd=cwd, env=self.env, check=True, shell=shell)
+    log(Colors.SH_COMMAND, f"+$ {' '.join(args) if isinstance(cmd, tuple) else cmd}")
+    subprocess.run(cmd, cwd=cwd, env=self.env, check=True, shell=shell)
+
 
 
   def cp(self, frm, to):
@@ -164,7 +165,6 @@ class BuildContext: # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
 
   def install(self):
     self.recipe["install"](self)
-
 
 def read_recipe(path):
   with open(path, "r") as f:
@@ -371,7 +371,6 @@ if __name__ == "__main__":
   log(None, "Building...")
   ctx.build()
   ctx.install()
-
 
   # make apk
   def run_apk(*args):

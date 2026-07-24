@@ -7,6 +7,7 @@ url = "https://invisible-island.net/ncurses/"
 arch = "x86_64"
 license = "MIT/X11"
 maintainer = "cachewave"
+
 sbu = 1.0
 
 sources = [f"https://ftp.gnu.org/gnu/ncurses/{pkgname}-{pkgver}.tar.gz"]

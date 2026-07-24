@@ -7,6 +7,8 @@ url = "https://xkbcommon.org/"
 arch = "x86_64"
 license = "MIT"
 
+sbu = 0.2
+
 sources = [f"https://github.com/xkbcommon/libxkbcommon/archive/refs/tags/xkbcommon-1.13.2.tar.gz"]
 depends = []
 
