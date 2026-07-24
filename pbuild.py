@@ -122,7 +122,7 @@ class BuildContext: # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
     os.makedirs(self.PKGDIR, exist_ok=True)    
     
     self.NPROC = os.cpu_count() if os.cpu_count() is not None else 1
-    self.LIBC = "glibc" # switch to musl to break everything TODO: package musl
+    self.LIBC = "glibc" # switch to musl to break everything TODON'T: package musl
     # i think this is wrong? ARCH would refer to our target architecture whereas recipe arch is the arch it can be built for
     # TODO: this should be replaced with if checks
     self.ARCH = recipe["arch"]
@@ -272,6 +272,7 @@ if __name__ == "__main__":
   parser.add_argument('-fresh', '-new', '-redownload', action = OptionalBoolAction, help='Redownload files even if they are already present and pass the integrity checks.', nargs = "?")
   parser.add_argument('-rebuild', action = OptionalBoolAction, help='Force rebuild even when package is already built.', nargs = "?")
   parser.add_argument('-color', action = OptionalBoolAction, help='Highlight warnings, errors and build completion.', nargs = "?")
+  parser.add_argument('-buildstatebreakdown', '-bsbd', '-bb', action = OptionalBoolAction, help='Show build state breakdown.', nargs = "?")
   parser.add_argument('-supressnonerrorlogs', '-clean-logs', action = OptionalBoolAction, help="Supress logs that aren't warnings, errors, or completion messages", nargs = "?")
   parser.add_argument('builddir', help='The directory to build the recipe in.', nargs = "?")
   parser.add_argument('-config', help='The config to use.', nargs = "?")
@@ -288,6 +289,7 @@ if __name__ == "__main__":
   ignoreintegrity = False
   color = True
   rebuild = False
+  show_bs_breakdown = True
   supressnonerrorlogs = False
 
   #TODO: move config reading to a separate function
@@ -302,7 +304,8 @@ if __name__ == "__main__":
                       "AssumeIgnoreIntegrity" : "no"
                         }
         configparser['Display'] = {"Color" : "yes",
-                        "SupressNonErrorLogs" : "no"
+                        "SupressNonErrorLogs" : "no",
+                        "BuildStateBreakdown" : "yes"
                         }
         configfile = open(CONFIGFILEPATH, 'w')
 
@@ -315,6 +318,7 @@ if __name__ == "__main__":
   color = configparser.getboolean('Display', 'Color')
   supressnonerrorlogs = configparser.getboolean('Display', 'SupressNonErrorLogs')
   rebuild = configparser.getboolean('Build', 'AssumeRebuild')
+  show_bs_breakdown = configparser.getboolean('Display', 'BuildStateBreakdown')
 
 
 
@@ -325,6 +329,7 @@ if __name__ == "__main__":
   if (args.fresh != None): redownload = args.fresh
   if (args.supressnonerrorlogs != None): supressnonerrorlogs = args.supressnonerrorlogs
   if (args.rebuild != None): rebuild = args.rebuild
+  if (args.buildstatebreakdown != None): show_bs_breakdown = args.buildstatebreakdown
 
 
   #pkgpath = sys.argv[1]
@@ -388,10 +393,11 @@ if __name__ == "__main__":
 
   log(Colors.SUCCESS, f"Done! Generated {outpath}")
   stop_event.set()
-  print()
-  log(Colors.SUCCESS, "Build State Breakdown:")
-  print()
-  print(build_state_breakdown())
+  if show_bs_breakdown:
+    print()
+    log(Colors.SUCCESS, f"Build State Breakdown: (With {NPROC} passed to NPROC)")
+    print()
+    print(build_state_breakdown())
 
 
 
