@@ -11,13 +11,14 @@ license = "GPLv2"
 sources = [f"{url}/-/archive/v{pkgver}/{pkgname}-v{pkgver}.tar.gz"]
 sha256sum = ["e9b62742ef7e9e8c1c051efdaed3a2f49d06d8ce20c707697aa23d29bbc7c86a"]
 depends = []
-makedpeneds = ['meson', 'python', 'ninja']
+makedepends = ['meson', 'python', 'ninja']
 
 
 def build(c):
 # meson setup -Dprefix=/ build
 # ninja -C build
 # meson install -C build
+  # valera pls fix the build directory is not the install dir i'm too lazy to fix
 
   c.SRCDIR = c.SRCDIR + f"/{pkgname}-v{pkgver}" # TODO fix this is because tar files have a top level name
   c.sh("meson", "setup", f"-Dprefix={c.PKGDIR}", f"{c.PKGDIR}")

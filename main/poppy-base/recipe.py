@@ -15,8 +15,10 @@ depends = [
   "extra/nano",
   "extra/fastfetch",
   "main/ncurses",
-  "extra/bsdgames",
+  "main/zlib",
   "main/wayland",
+
+  "extra/bsdgames",
   "extra/figlet",
   "main/libinput",
   "main/dinit",
