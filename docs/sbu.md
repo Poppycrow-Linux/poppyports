@@ -11,7 +11,7 @@ These units are a floating point integer with one decimal point of precision (fo
 
 One SBU is defined as the time it takes to configure and install the ncurses library on one core (which means NO multithreading). 
 Since build time varies severely from computer to computer, the calculated SBU time is only applicable to that specific computer, and is invalidated by upgrades of any kind.
-In order to time this, a user may run the following bash script in the build directory:
+In order to time this, a user may run the following bash script in the build directory of ncurses:
 
 ```
 time {
@@ -23,7 +23,8 @@ time {
 When the build finishes, it will print three numbers, `real`, `user`, and `sys`. Only `real` is relevant, and that is the time of 1 SBU. 
 You can use this time value to calculate the approximate time a package will take to build. For instance, if package foo has 3.2 SBUs, and your calculated
 SBU is 1 minute, multiply 1 minute by 3.2 to get 3 minutes 12 seconds.
-
+Alternatively, a script was created for this process to be automated; it resides in /scripts/calculatesbu.py. This builds a dummy ncurses in line with the main/ncurses port, and provides
+the calculated time in minutes and seconds.
 
 ## How to calculate the SBU for a newly added recipe 
 
