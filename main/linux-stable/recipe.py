@@ -1,17 +1,17 @@
 recipever = 0
 pkgname = "linux-stable"
-pkgver = "7.1.4"
+pkgver = "7.1.5"
 pkgrel = 0
 pkgdesc = "Linux Kernel (stable)"
 url = "https://kernel.org/"
 arch = "x86_64"
 license = "GPL v2"
 
-sources = [f"https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-7.1.4.tar.xz"]
+sources = [f"https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-{pkgver}.tar.xz"]
 depends = []
 
 def build(c):
-  c.SRCDIR = c.SRCDIR + "/linux-7.1.4" # TODO fix this is because tar files have a top level name
+  c.SRCDIR = c.SRCDIR + f"/linux-{pkgver}" # TODO fix this is because tar files have a top level name
   c.sh("make", "defconfig")
   c.cp(f"{c.PORTDIR}/.config",f"{c.SRCDIR}/.config")
   c.sh("make",f"-j{c.NPROC}","LLVM=1")
