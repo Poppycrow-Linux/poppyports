@@ -29,7 +29,7 @@ Please note this is not a final spec, and still under extensive development.
 - `sha256sum`: List of sha256sums. Usually a 1:1 map between sources (i.e. sources[0] is checked against sha256sum[0]). Used for checking remote file integrity.
 - `depends`: List of packages the recipe depends on at RUNTIME. (check apk runtime resolving)
 - `makedepends`: List of packages the recipe depends on at BUILD-TIME. (TODO)
-
+- `sbu` : A float that shows how much time the package takes to build, assuming the build is single threaded and that ncurses takes 1 SBU. For more info about SBUs, read sbu.md This variable will be used to determine which CI server to use.
 
 - `optdepends`: List of packages that the package optionally depends on, at runtime. Since the package is assumed to be built with all functionally relevant functions enabled, optdepends are also usually required to build it. This isn't used by apk itself, but it's a future thing for an apk wrapper that will add some QoL improvements.
 - `is_group`: Used to distinguish between groups (like `poppy-base`), and normal packages, as groups in APK are crudely implemented via empty packages with all the group memebers listed as dependencies. This field will help a future APK wrapper. Assumed false by default.
