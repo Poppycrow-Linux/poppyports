@@ -395,7 +395,7 @@ if __name__ == "__main__":
   stop_event.set()
   if show_bs_breakdown:
     print()
-    log(Colors.SUCCESS, f"Build State Breakdown: (With {NPROC} passed to NPROC)")
+    log(Colors.SUCCESS, f"Build State Breakdown: (With {ctx.NPROC} passed to NPROC)")
     print()
     print(build_state_breakdown())
 
