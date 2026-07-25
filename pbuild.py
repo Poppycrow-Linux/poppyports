@@ -276,6 +276,7 @@ if __name__ == "__main__":
   parser.add_argument('-supressnonerrorlogs', '-clean-logs', action = OptionalBoolAction, help="Supress logs that aren't warnings, errors, or completion messages", nargs = "?")
   parser.add_argument('builddir', help='The directory to build the recipe in.', nargs = "?")
   parser.add_argument('-config', help='The config to use.', nargs = "?")
+  parser.add_argument('-signkey', help="Signature private key to use for apk signing", nargs="?")
   args = parser.parse_args()
 
 
@@ -378,17 +379,33 @@ if __name__ == "__main__":
   ctx.install()
 
   # make apk
-  def run_apk(*args):
+  def run_apk(args):
     #env = os.environ.copy()
     #env["LD_LIBRARY_PATH"] = "staging/apk-install/lib/x86_64-linux-gnu/"
     subprocess.run(["apk"] + list(args), env=os.environ, check=True)
 
-  # the minimum you need to pass it seems?
-  run_apk("mkpkg",
-          "-I", f"name:{recipe["pkgname"]}",
-          "-I", f"version:{recipe["pkgver"]}",
-          "-F", ctx.PKGDIR,
-          "-o", outpath)
+
+  # TODO: https://man.archlinux.org/man/apk-package.5.en
+  apkcmd = ["mkpkg"]
+  if args.signkey:
+    apkcmd.extend(["--sign-key", args.signkey])
+
+  # somebody pls figure this shit out i am so done
+  depends = []
+  for p in recipe["depends"]: depends.append(p)
+
+  apkcmd.extend([
+    "-I", f"name:{recipe["pkgname"]}",
+    "-I", f"version:{recipe["pkgver"]}",
+    "-I", f"description:{recipe["pkgdesc"]}",
+    "-I", f"arch:{ctx.ARCH}",
+    "-I", f"license:{recipe["license"]}",
+    "-I", f"url:{recipe["url"]}",
+    "-U", f"depends:{' '.join(depends)}"
+  ])
+  apkcmd.extend(["-F", ctx.PKGDIR, "-o", outpath])
+
+  run_apk(apkcmd)
   change_status(State.DONE)
 
   log(Colors.SUCCESS, f"Done! Generated {outpath}")
