@@ -20,7 +20,6 @@ depends = [
   "main/apk",
   "main/openssl",
   "xorg/xorg-xserver",
-
   "games/bsdgames",
   "apps/figlet",
   "main/libinput",
