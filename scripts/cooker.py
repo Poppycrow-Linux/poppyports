@@ -11,8 +11,20 @@ generate_hash = False
 depends = input("Dependencies (Separate by | to add multiple):").split('|')
 makedepends = input("Make Dependencies (Separate by | to add multiple):").split('|')
 print()
-build_cmd = input("Build Command:")
-install_cmd = input("Install Command:")
+print("Type in build commands. Press ENTER after each one and type in END as the last command to end it:\n")
+build_cmds = []
+while True:
+    i = input("")
+    if i.lower() == "end":
+        break
+    build_cmds.append(i)
+print("Type in install commands. Press ENTER after each one and type in END as the last command to end it::")
+install_cmds = []
+while True:
+    i = input("")
+    if i.lower() == "end":
+        break
+    install_cmds.append(i)
 print()
 is_main = input("Should this be a Main package? (y/N):")[0].lower() == "y"
 directory = pathlib.Path(f'./{"main" if is_main else "extra"}/{pkgname}/')
@@ -25,10 +37,13 @@ def generate_sha256(sources):
         response = requests.get(url)
         result.append(hashlib.sha256(response.content).hexdigest())
     return f'sha256sum={result}' if result else ''
-
-#TODO: make sources replace the strings with a format strigns with pkgname and pkgver shit !!
-result = f'''
-# Generated with Cooker!
+source_line = '['
+for s in sources:
+    source_line += f'f"{s.replace(pkgname, '{pkgname}').replace(pkgver, '{pkgver}')}"'
+source_line += ']'
+build_lines = "\n".join(f'\tc.sh("{cmd}")' for cmd in build_cmds)
+install_lines = "\n".join(f'\tc.sh("{cmd}")' for cmd in install_cmds)
+result = f'''# Generated with Cooker!
 recipever=0
 pkgname="{pkgname}"
 pkgver="{pkgver}"
@@ -36,14 +51,14 @@ pkgdesc="{pkgdesc}"
 url="{url}"
 arch="x86_64"
 license="{license}"
-sources={sources}  
+sources={source_line}  
 {generate_sha256(sources) if generate_hash else ""}
 depends={depends}
 makedepends={makedepends}
 def build(c):
-\tc.sh("{build_cmd}")
+{build_lines}
 def install(c):
-\tc.sh("{install_cmd}")
+{install_lines}
 '''
 with open(path, "w") as f:
     f.write(result)
