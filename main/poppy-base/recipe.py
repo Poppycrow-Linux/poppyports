@@ -12,8 +12,8 @@ depends = [
   "main/busybox",
   "main/glibc",
   "main/bash",
-  "extra/nano",
-  "extra/fastfetch",
+  "editors/nano",
+  "apps/fastfetch",
   "main/ncurses",
   "main/zlib",
   "main/wayland",
@@ -21,8 +21,8 @@ depends = [
   "main/openssl"
   "main/x11-server",
 
-  "extra/bsdgames",
-  "extra/figlet",
+  "games/bsdgames",
+  "apps/figlet",
   "main/libinput",
   "main/dinit",
   "main/libffi",
