@@ -14,7 +14,7 @@ from the ports system found on FreeBSD and OpenBSD, but inspiration for our inca
 While the port system is unfinished, the spec right now is good enough to migitate breaking changes when they appear. Read CONTRIBUTING.md, and also the docs in the `etc/docs` folder to know the recipe spec. Once you get your recipe to build, feel free to open a PR. If things really do work, and especially if the package is in the high priority issues list, it's probably going to be accepted. 
 
 ## What software to package?
-The system, as it is right now, boots. And that's about it. We lack multiuser, networking, the init system doesn't really work, so any package that helps with that is very welcome. If you don't want to package anything from issues, you can run the 'whattopackage.py' script, which looks for any unpackaged dependencies of things that are already packaged. 
+The system, as it is right now, boots. And that's about it. We lack networking, graphics, the init system doesn't really work, so any package that helps with that is very welcome. If you don't want to package anything from issues, you can run the 'whattopackage.py' script, which looks for any unpackaged dependencies of things that are already packaged. 
 
 ## The build system
 
