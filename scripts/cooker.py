@@ -26,8 +26,8 @@ while True:
         break
     install_cmds.append(i)
 print()
-is_main = input("Should this be a Main package? (y/N):")[0].lower() == "y"
-directory = pathlib.Path(f'./{"main" if is_main else "extra"}/{pkgname}/')
+category = input("Package Category:")[0].lower() == "y"
+directory = pathlib.Path(category) / pkgname
 directory.mkdir(parents=True,exist_ok=True)
 path = directory / "recipe.py"
 #FIXME: fix this. outputs wrong output 
