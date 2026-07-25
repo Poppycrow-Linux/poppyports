@@ -18,8 +18,8 @@ depends = [
   "main/zlib",
   "main/wayland",
   "main/apk",
-  "main/openssl"
-  "main/x11-server",
+  "main/openssl",
+  "xorg/xorg-xserver",
 
   "games/bsdgames",
   "apps/figlet",

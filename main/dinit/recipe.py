@@ -11,7 +11,7 @@ sbu = 0.5
 
 # https://github.com/davmac314/dinit/archive/refs/tags/v0.22.1.tar.gz
 sources = [f"{url}/archive/refs/tags/v{pkgver}.tar.gz"]
-depends = []
+depends = ["libstdc++"]
 makedepends = ["make"]
 
 def build(c):
