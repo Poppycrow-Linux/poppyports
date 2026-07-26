@@ -1,9 +1,10 @@
 # TODO: smartly skip which pkgs are compiled and didnt change
 # TODO: figure out how to integrate repo with apk
-import os, subprocess
+import os, subprocess, sys
 
 ARCH = "x86_64"
-REPOS = ["main", "extra"]
+REPOS = ["apps", "editors", "games", "lang", "main", "xorg"]
+SIGNKEY = sys.argv[1]
 
 
 def sh(args, cwd=None):
@@ -19,7 +20,7 @@ for repo in REPOS:
   for pkg in pkgs:
     print(f"CI Building {repo}:{pkg}")
     try:
-      sh(f"python3 pbuild.py {repo}/{pkg} build/pkg/{repo}/{pkg}")
+      sh(f"python3 pbuild.py -signkey {SIGNKEY}  {repo}/{pkg} build/pkg/{repo}/{pkg}")
       sh(f"cp -v build/pkg/{repo}/{pkg}/*.apk build/apks/{ARCH}/.")
       done += 1
     except Exception as e:
@@ -31,5 +32,5 @@ print(f"CI summary: {done} done, {fail} failed, {done-fail} success")
 
 # https://man.archlinux.org/man/apk-mkndx.8.en
 # https://man.archlinux.org/man/apk-repositories.5.en   "index (v3) is at $base_url/$arch/Packages.adb"  "default package path: $base_url/$arch/$name-$version.apk"
-print("generating apkindex...")
-sh(f"apk mkndx --hash sha256 -o build/apks/{ARCH}/Packages.adb build/apks/{ARCH}/*.apk")
+print("generating apkindex (Packages.adb)...")
+sh(f"apk --sign-key {SIGNKEY} mkndx --hash sha256 -o build/apks/{ARCH}/Packages.adb build/apks/{ARCH}/*.apk")

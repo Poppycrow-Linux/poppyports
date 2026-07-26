@@ -2,10 +2,10 @@ import os, subprocess
 
 print("Reading poppy-base dependencies")
 recipe = {}
-with open("sys/poppy-base/recipe.py", "r") as f:
+with open("main/poppy-base/recipe.py", "r") as f:
   exec(f.read(), recipe)
 
-depends = ["sys/poppy-base"] + recipe["depends"]
+depends = ["main/poppy-base"] + recipe["depends"]
 print(depends)
 
 # set up rootfs

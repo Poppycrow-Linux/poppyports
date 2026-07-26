@@ -12,21 +12,21 @@ depends = [
   "main/busybox",
   "main/glibc",
   "main/bash",
-  "editors/nano",
+  #"editors/nano",
   "apps/fastfetch",
   "main/ncurses",
   "main/zlib",
-  "main/wayland",
+  #"main/wayland",
   "main/apk",
   "main/openssl",
-  "xorg/xorg-xserver",
+  #"xorg/xorg-xserver",
   "games/bsdgames",
   "apps/figlet",
-  "main/libinput",
-  "main/dinit",
-  "main/libffi",
-  "main/libdrm",
-  "main/libxkbcommon"
+  #"main/libinput",
+  #"main/dinit",
+  #"main/libffi",
+  #"main/libdrm",
+  #"main/libxkbcommon"
 ]
 
 def build(c):
@@ -34,3 +34,4 @@ def build(c):
 
 def install(c):
   c.sh("chmod", "+x", f"{c.PORTDIR}/overlay/init") # make init executable
+  c.cp(f"{c.PORTDIR}/overlay/.", c.PKGDIR)

@@ -2,6 +2,8 @@
 # its ok its staging
 import os, subprocess
 
+SIGNKEY = "crowapkteam-private.pem" # required!
+
 print("Reading poppy-base dependencies")
 recipe = {}
 with open("main/poppy-base/recipe.py", "r") as f:
@@ -10,19 +12,64 @@ with open("main/poppy-base/recipe.py", "r") as f:
 depends = ["main/poppy-base"] + recipe["depends"]
 print(depends)
 
+
+def sh(args, cwd=None):
+  print(f"+$ {args}")
+  subprocess.run(args, cwd=cwd, check=True, shell=True)
+
+# set up rootfs
+"""
+/sbin links to /usr/sbin
+/bin links to /usr/bin
+/lib links to /usr/lib
+/lib32 links to /usr/lib32
+/lib64 links to /usr/lib64
+/dev
+/dev/pts
+/dev/shm
+/sys
+/sys/fs/cgroup
+/proc
+"""
+if os.path.exists("build/rootfs/"):
+  sh("rm -rf build/rootfs/")
+
+
+sh("mkdir -p build/rootfs/sys/fs/cgroup")
+sh("mkdir -p build/rootfs/dev/pts")
+sh("mkdir -p build/rootfs/dev/shm")
+sh("mkdir -p build/rootfs/proc")
+sh("mkdir -p build/rootfs/run")
+sh("mkdir -p build/rootfs/usr/sbin")
+sh("mkdir -p build/rootfs/usr/bin")
+sh("mkdir -p build/rootfs/usr/lib")
+FSDIR = os.getcwd() + "/build/rootfs/"
+sh("ln -s usr/bin bin", cwd=FSDIR)
+sh("ln -s usr/sbin sbin", cwd=FSDIR)
+sh("ln -s usr/lib lib", cwd=FSDIR)
+sh("ln -s usr/lib lib32", cwd=FSDIR)
+sh("ln -s usr/lib lib64", cwd=FSDIR)
+sh("ln -s lib lib32", cwd=FSDIR+"/usr")
+sh("ln -s lib lib64", cwd=FSDIR+"/usr")
+# hacky
+sh("ln -s . ./x86_64-linux-gnu", cwd=FSDIR+"lib")
+
+sh("mkdir -p build/rootfs/apks/x86_64/")
+
 for dep in depends:
   print(f"building {dep}")
-  subprocess.run(["python3", "pbuild.py", f"{dep}", f"build/pkg/{dep}"])
-  subprocess.run(["cp", "-a", f"build/pkg/{dep}/pkgdir/.", "build/rootfs/"])
+  sh(f"python3 pbuild.py -signkey {SIGNKEY} {dep} build/pkg/{dep}")
+  sh(f"cp -v build/pkg/{dep}/*.apk build/rootfs/apks/x86_64/.")
 
-# TODO: print(f"generating apkindex")
-#       do this in build/repo/APKINDEX.tar.gz
-#       oh also copy all the apks there.
 
+print("generating apkindex...")
+sh(f"apk --sign-key {SIGNKEY} mkndx --hash sha256 -o build/rootfs/apks/x86_64/Packages.adb build/rootfs/apks/x86_64/*.apk")
+
+sh("apk add --allow-untrusted --initdb --root . ./apks/x86_64/*.apk", cwd=FSDIR)
 
 print("generating initramfs")
 #cd initramfs && (find . | cpio -o -H newc -R root:root > ../init.cpio) && cd ..
-subprocess.run("find . | cpio -o -H newc -R root:root > ../init.cpio", cwd="build/rootfs/", shell=True)
+sh("find . | cpio -o -H newc -R root:root > ../init.cpio", cwd=FSDIR)
 
 
 print("generating isoroot")
@@ -36,7 +83,7 @@ menuentry "poppycrow" {
   initrd /boot/init.cpio
 }""")
 
-subprocess.run(["cp", "-v", "build/rootfs/boot/bzImage", "build/isoroot/boot/bzImage"])  
-subprocess.run(["cp", "-v", "build/init.cpio", "build/isoroot/boot/init.cpio"])
+sh("cp -v build/rootfs/boot/bzImage build/isoroot/boot/bzImage")
+sh("cp -v build/init.cpio           build/isoroot/boot/init.cpio")
 
-subprocess.run(["grub-mkrescue", "-o", "build/poppycrow.iso", "build/isoroot"])
+sh("grub-mkrescue -o build/poppycrow.iso build/isoroot")
