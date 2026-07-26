@@ -2,8 +2,8 @@ recipever = 0
 pkgname = "go"
 pkgver = "1.26.5"
 pkgrel = 0
-pkgdesc = "lua"
-url = "https://www.lua.org/"
+pkgdesc = "The go programming language."
+url = "https://go.dev/"
 arch = "x86_64"
 license = "BSD-3-Clause"
 
@@ -19,4 +19,4 @@ def build(c):
   c.sh(f"GOROOT={c.PKGDIR}/usr/sbin ./make.bash")
 
 def install(c):
-  pass
+  pass # in their smartassery the go devs decided to make the making and compiling process the same command.
