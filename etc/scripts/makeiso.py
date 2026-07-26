@@ -1,15 +1,24 @@
-# I am very aware this is basically a bash script disguised as a python script. i didn't even test this. i have no idea if it works.
-# its ok its staging
 import os, subprocess
 
 SIGNKEY = "crowapkteam-private.pem" # required!
 
-print("Reading poppy-base dependencies")
-recipe = {}
-with open("main/poppy-base/recipe.py", "r") as f:
-  exec(f.read(), recipe)
+# the reason the dependencies are listed like this is because we need to know what to build.
+# this has to be manually updated meaning all packages and their dependencies in poppy-base.
+# I know you already want to lynch me for this, but again this script's job is not to be a dependency resolver and fucking builder
+# its meant to take a base system apk and construct it from a repo which builds ALL packages. this scripts job is not to build shit. 
+# TODO: make a damn repo and remove this
+depends = [
+  "main/poppy-base",
+  "main/linux-stable",
+  "main/busybox",
+  "main/glibc",
+  "main/bash", "main/ncurses",
+  "main/apk-tools", "main/openssl", "main/zlib",
 
-depends = ["main/poppy-base"] + recipe["depends"]
+  "apps/fastfetch",
+  "games/bsdgames",
+  "apps/figlet",
+]
 print(depends)
 
 

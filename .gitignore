@@ -5,6 +5,9 @@ pbuild.conf
 staging/apk-install
 staging/apk-tools
 
+# private keys we cannot leak
+*.pem
+
 # temporary shit
 build/
 *.apk

@@ -7,7 +7,7 @@ arch = "x86_64"
 license = "apache-2.0"
 
 sources = [f"https://github.com/openssl/openssl/releases/download/openssl-{pkgver}/openssl-{pkgver}.tar.gz"]
-depends = []
+depends = ["libc"]
 
 def build(c):
   c.SRCDIR += f"/openssl-{pkgver}"

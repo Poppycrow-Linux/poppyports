@@ -19,7 +19,7 @@ license = "Apache-2.0"
 maintainer = "samxyz30"
 
 sources = [f"https://github.com/llvm/llvm-project/releases/download/llvmorg-{pkgver}/llvm-project-{pkgver}.src.tar.xz"]
-depends = []
+depends = ["libc"]
 
 def build(c):
   c.SRCDIR += f"/llvm-project-{pkgver}.src"

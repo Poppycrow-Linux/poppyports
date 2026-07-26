@@ -9,7 +9,7 @@ maintainer = "samxyz30"
 
 sources = [f"https://zlib.net/zlib-{pkgver}.tar.gz"]
 sha256sum = ["bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16"]
-depends = []
+depends = ["libc"]
 
 def build(c):
   c.SRCDIR += f"/zlib-{pkgver}"

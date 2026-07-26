@@ -12,7 +12,7 @@ sbu = 1.0
 
 sources = [f"https://ftp.gnu.org/gnu/ncurses/{pkgname}-{pkgver}.tar.gz"]
 sha256sum = ["355b4cbbed880b0381a04c46617b7656e362585d52e9cf84a67e2009b749ff11"]
-depends = []
+depends = ["libc"]
 
 def build(c):
   c.SRCDIR = c.SRCDIR + f"/{pkgname}-{pkgver}"

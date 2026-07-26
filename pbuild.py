@@ -401,7 +401,7 @@ if __name__ == "__main__":
     "-I", f"arch:{ctx.ARCH}",
     "-I", f"license:{recipe["license"]}",
     "-I", f"url:{recipe["url"]}",
-    "-U", f"depends:{' '.join(depends)}"
+    "-I", f"depends:{' '.join(depends)}"
   ])
   apkcmd.extend(["-F", ctx.PKGDIR, "-o", outpath])
 

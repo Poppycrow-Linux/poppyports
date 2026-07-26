@@ -10,7 +10,7 @@ license = "GPLv2"
 # https://gitlab.alpinelinux.org/alpine/apk-tools/-/archive/v3.0.6/apk-tools-v3.0.6.tar.gz
 sources = [f"{url}/-/archive/v{pkgver}/{pkgname}-v{pkgver}.tar.gz"]
 sha256sum = ["e9b62742ef7e9e8c1c051efdaed3a2f49d06d8ce20c707697aa23d29bbc7c86a"]
-depends = []
+depends = ["libc", "openssl", "zlib"]
 makedepends = ['meson', 'python', 'ninja']
 
 

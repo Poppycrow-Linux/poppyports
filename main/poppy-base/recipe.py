@@ -8,20 +8,19 @@ license = "MIT"
 sources = []
 
 depends = [
-  "main/linux-stable",
-  "main/busybox",
-  "main/glibc",
-  "main/bash",
+  "linux-stable",
+  "busybox",
+  "glibc",
+  "bash",
+  "apk-tools",
+  # below is not base but i'm keeping it in for now. TODO: make a new system-base package this sucks
+  "fastfetch",
+  "bsdgames",
+  "figlet",
+  # this is BAD syntax and will not work!!
   #"editors/nano",
-  "apps/fastfetch",
-  "main/ncurses",
-  "main/zlib",
   #"main/wayland",
-  "main/apk",
-  "main/openssl",
   #"xorg/xorg-xserver",
-  "games/bsdgames",
-  "apps/figlet",
   #"main/libinput",
   #"main/dinit",
   #"main/libffi",
