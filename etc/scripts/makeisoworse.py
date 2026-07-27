@@ -1,11 +1,11 @@
 import os, subprocess
 
-print("Reading poppy-base dependencies")
+print("Reading livecd-base dependencies")
 recipe = {}
-with open("main/poppy-base/recipe.py", "r") as f:
+with open("main/livecd-base/recipe.py", "r") as f:
   exec(f.read(), recipe)
 
-depends = ["main/poppy-base"] + recipe["depends"]
+depends = ["main/livecd-base"] + recipe["depends"]
 print(depends)
 
 # set up rootfs

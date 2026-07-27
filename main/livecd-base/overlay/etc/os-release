@@ -1,0 +1,6 @@
+NAME="Poppycrow Linux"
+ID=poppycrow
+VERSION_ID=0.0.0
+PRETTY_NAME="Poppycrow Linux Pre-Alpha"
+HOME_URL="https://poppycrow.org/"
+BUG_REPORT_URL="https://bugs.poppycrow.org/"
