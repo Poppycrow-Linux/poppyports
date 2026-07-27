@@ -12,8 +12,7 @@ sbu = 0.9
 
 sources = [f"{url}/archive/refs/tags/{pkgver}.tar.gz"]
 sha256sum = ["547883c2f0dbc85a4545d4533f5b812fbc4c8ffe1271056de18b51994acbf474"]
-depends = ['glibc', 'yyjson']
-optdepends = ['libvulkan', 'libpulse', 'wayland', 'libdrm', 'libgio', 'dconf', 'libmagickcore', 'libchafa', 'zlib', 'dbus', 'libegl', 'libglx', 'libopencl', 'libxrandr', 'glib2', 'dconf', 'sqlite'] #TODO: complete the full list, package it, and also add a section to recipes that would allow to explain the fucntionality the packages provide a la arch linux. this section probably will be ignored by apk but handled by an apk wrapper i will start work on when we figure out how to add extra metadata to apks themselves.
+depends = ['glibc']
 
 
 def build(c):
