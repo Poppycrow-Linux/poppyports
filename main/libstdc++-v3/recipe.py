@@ -20,7 +20,6 @@ def build(c):
 
   c.sh("../libstdc++-v3/configure",
        "--prefix=/usr",
-       "--disable-multilib",
        "--disable-nls",
        "--disable-fixincludes",
        "--disable-libstdcxx-pch")

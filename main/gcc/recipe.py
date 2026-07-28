@@ -22,7 +22,6 @@ def build(c):
 
   c.sh("../configure",
        "--prefix=/usr",
-       "--disable-multilib",
        "--with-system-zlib",
        "--enable-default-pie",
        "--enable-default-ssp",
