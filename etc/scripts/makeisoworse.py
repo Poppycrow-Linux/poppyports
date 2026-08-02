@@ -26,6 +26,7 @@ print(depends)
 # set up rootfs
 """
 /sbin links to /usr/sbin
+/usr/sbin links to /bin which then links to /usr/bin
 /bin links to /usr/bin
 /lib links to /usr/lib
 /lib32 links to /usr/lib32
@@ -53,11 +54,11 @@ subprocess.run(("mkdir","-p","build/rootfs/dev/pts"))
 subprocess.run(("mkdir","-p","build/rootfs/dev/shm"))
 subprocess.run(("mkdir","-p","build/rootfs/proc"))
 subprocess.run(("mkdir","-p","build/rootfs/run"))
-subprocess.run(("mkdir","-p","build/rootfs/usr/sbin"))
 subprocess.run(("mkdir","-p","build/rootfs/usr/bin"))
 subprocess.run(("mkdir","-p","build/rootfs/usr/lib"))
-subprocess.run(("ln","-s","usr/bin","bin"),cwd=os.getcwd()+"/build/rootfs")
-subprocess.run(("ln","-s","usr/bin","sbin"),cwd=os.getcwd()+"/build/rootfs")
+subprocess.run(("ln", "-s", "usr/bin", "bin"), cwd= os.getcwd()+"/build/rootfs")
+subprocess.run(("ln", "-s", "usr/bin", "sbin"), cwd= os.getcwd()+"/build/rootfs")
+subprocess.run(("ln", "-s", "bin", "usr/sbin"), cwd=os.getcwd()+"/build/rootfs")
 subprocess.run(("ln","-s","usr/lib","lib"),cwd=os.getcwd()+"/build/rootfs")
 #subprocess.run(("ln","-s","usr/lib","lib32"),cwd=os.getcwd()+"/build/rootfs")
 subprocess.run(("ln","-s","usr/lib","lib64"),cwd=os.getcwd()+"/build/rootfs")
