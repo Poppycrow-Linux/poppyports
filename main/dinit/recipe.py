@@ -16,9 +16,17 @@ makedepends = ["make"]
 
 def build(c):
   c.SRCDIR = c.SRCDIR + f"/{pkgname}-{pkgver}"
+  configureflags = [
+    "--disable-strip",
+    "--enable-shutdown",
+    "--platform=Linux",
+    "--sbindir=/usr/bin",
+    "--syscontrolsocket=/run/dinitctl"
+  ]
 
-  # apply patches
+
   c.sh("make mconfig") #TODO: edit mconfig
+  c.sh("./configure", *configureflags)
   c.sh("make", f"-j{c.NPROC}")
 
 def install(c):
