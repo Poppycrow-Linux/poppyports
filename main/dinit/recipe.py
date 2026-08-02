@@ -20,7 +20,7 @@ def build(c):
     "--disable-strip",
     "--enable-shutdown",
     "--platform=Linux",
-    "--sbindir=/usr/bin",
+    "--sbindir=/usr/sbin",
     "--syscontrolsocket=/run/dinitctl"
   ]
 

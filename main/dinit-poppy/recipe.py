@@ -33,5 +33,7 @@ def build(c):
 
 # who loves cherrypicking?
 def install(c):
+    c.sh(f"cp -r {bdir}/early/scripts/init {c.PKGDIR}/init")
+    c.sh(f"chmod +x {c.PKGDIR}/init")
     c.sh(f"cp -r {bdir}/services/* {c.PKGDIR}/usr/lib/dinit.d")
     c.sh(f"cp -r {bdir}/early/ {c.PKGDIR}/usr/lib/dinit.d/")

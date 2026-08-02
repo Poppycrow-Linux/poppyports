@@ -9,6 +9,8 @@ sources = []
 
 depends = [
     "main/linux-stable",
+    "main/libstdc++-v3",
+    "main/libgcc",
     "main/busybox",
     "main/dinit-poppy",
     "main/glibc",
@@ -23,7 +25,6 @@ depends = [
     "main/dinit",
     "main/dinit-tiny-devd",
     "main/openssl",
-    "main/libstdc++-v3",
     "apps/parted",
     "main/libcap"
 ]
@@ -34,5 +35,5 @@ def build(c):
 
 
 def install(c):
-    c.sh("chmod", "+x", f"{c.PORTDIR}/overlay/init")  # make init executable
-    c.cp(f"{c.PORTDIR}/overlay/.", c.PKGDIR)
+   c.sh("chmod", "+x", f"{c.PORTDIR}/overlay/init_old")  # make init executable
+   c.cp(f"{c.PORTDIR}/overlay/.", c.PKGDIR)
