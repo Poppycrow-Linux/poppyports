@@ -517,7 +517,7 @@ if __name__ == "__main__":
     run_apk(apkcmd)
     change_status(State.DONE)
     log(
-        colors.SUCCESS,
+        Colors.SUCCESS,
         f"Done! Generated {outpath} ({human_fsize(outpath)})",
     )
     stop_event.set()
