@@ -1,4 +1,19 @@
-import os, subprocess
+import argparse
+import os
+import shutil
+import subprocess
+
+parser = argparse.ArgumentParser(
+    prog="makeisoworse",
+    # suggest_on_error=True, # this doesn't work on my python 3.13
+    description="Makes the rootfs and an init.cpio.",
+    epilog="See more @ https://codeberg.org/Poppycrow-Linux/poppyports",
+)
+
+parser.add_argument("-force", "-force-rebuild", "-fr", "-fresh", action="store_true", help="Deletes the rootfs before building.")
+
+args = parser.parse_args()
+force = args.force
 
 print("Reading livecd-base dependencies")
 recipe = {}
@@ -24,8 +39,14 @@ print(depends)
 """
 
 if os.path.exists("build/rootfs"):
-  print("rootfs already exists. delete it before running this")
-  exit(1)
+    if not(force):
+        print("rootfs already exists. delete it before running this")
+        exit(1)
+    else:
+        print("Force flag was passed, nuking the rootfs dir!")
+        shutil.rmtree("build/rootfs")
+
+
 
 subprocess.run(("mkdir","-p","build/rootfs/sys/fs/cgroup"))
 subprocess.run(("mkdir","-p","build/rootfs/dev/pts"))
