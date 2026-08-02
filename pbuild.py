@@ -302,7 +302,7 @@ if __name__ == "__main__":
         prog="pbuild",
         # suggest_on_error=True, # this doesn't work on my python 3.13
         description="Compiles apk files to be used in Poppycrow Linux repos.",
-        epilog="See more @ github.com/Poppycrow-Linux/poppyports/",
+        epilog="See more @ https://codeberg.org/Poppycrow-Linux/poppyports",
     )
     parser.add_argument(
         "pkgpath", help="Path of the folder that contains the build recipe."
@@ -453,11 +453,7 @@ if __name__ == "__main__":
             log(Colors.SUCCESS, "☑ Integrity check passed.")
         else:
             log(Colors.ERROR, "!!!!!!!!!!!! INTEGRITY CHECK FAILED !!!!!!!!!!!!")
-            log(
-                Colors.ERROR,
-                check_downloaded(ctx, recipe["sha256sum"]),
-                " FAILED THE CHECKSUM",
-            )
+            log(Colors.ERROR, check_downloaded(ctx, recipe["sha256sum"]), " FAILED THE CHECKSUM",)
             if not (ignoreintegrity):
                 raise InvalidChecksumError(
                     "One or more file(s) did not pass the integrity check. Use -ii or -ignoreintegrity to bypass this error."
@@ -516,16 +512,11 @@ if __name__ == "__main__":
 
     run_apk(apkcmd)
     change_status(State.DONE)
-    log(
-        Colors.SUCCESS,
-        f"Done! Generated {outpath} ({human_fsize(outpath)})",
-    )
+    log(Colors.SUCCESS, f"Done! Generated {outpath} ({human_fsize(outpath)})",)
     stop_event.set()
     if show_bs_breakdown:
         print()
-        log(
-            Colors.SUCCESS, f"Build State Breakdown: (With {ctx.NPROC} passed to NPROC)"
-        )
+        log(Colors.SUCCESS, f"Build State Breakdown: (With {ctx.NPROC} passed to NPROC)")
         print()
         print(build_state_breakdown())
 
