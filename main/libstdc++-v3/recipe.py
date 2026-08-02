@@ -22,6 +22,7 @@ def build(c):
        "--prefix=/usr",
        "--disable-nls",
        "--disable-fixincludes",
+       "--enable-multilib", # this is for 32 bit apps to work hopefully I guess
        "--disable-libstdcxx-pch")
 
   c.sh("make", f"-j{c.NPROC}")

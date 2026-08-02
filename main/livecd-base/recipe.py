@@ -8,20 +8,31 @@ license = "BSD3"
 sources = []
 
 depends = [
-  "main/linux-stable",
-  "main/busybox",
-  "main/glibc",
-  "main/apk-tools",
-  "main/ncurses",
-  "main/udev",
-  "main/zlib",
-  "main/openssl",
-  "apps/parted"
+    "main/linux-stable",
+    "main/busybox",
+    "main/dinit-poppy",
+    "main/glibc",
+    "main/bash",
+    "apps/figlet",
+    "apps/fastfetch",
+    "main/apk-tools",
+    "main/ncurses",
+    "main/udev",
+    "main/zlib",
+    "main/e2fsprogs",
+    "main/dinit",
+    "main/dinit-tiny-devd",
+    "main/openssl",
+    "main/libstdc++-v3",
+    "apps/parted",
+    "main/libcap"
 ]
 
+
 def build(c):
-  pass
+    pass
+
 
 def install(c):
-  c.sh("chmod", "+x", f"{c.PORTDIR}/overlay/init") # make init executable
-  c.cp(f"{c.PORTDIR}/overlay/.", c.PKGDIR)
+    c.sh("chmod", "+x", f"{c.PORTDIR}/overlay/init")  # make init executable
+    c.cp(f"{c.PORTDIR}/overlay/.", c.PKGDIR)

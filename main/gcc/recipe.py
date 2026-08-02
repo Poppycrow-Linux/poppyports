@@ -27,6 +27,7 @@ def build(c):
        "--enable-default-ssp",
        "--enable-host-pie",
        "--disable-fixincludes",
+       "--enable-multilib" # we love multilib
        "--enable-languages=c,c++")
 
   c.sh("make", f"-j{c.NPROC}")
