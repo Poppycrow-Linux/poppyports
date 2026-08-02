@@ -8,8 +8,10 @@ arch = "x86_64"
 license = "GPL v3"
 
 sbu = 18.0
-
-sources = [f"https://ftpmirror.gnu.org/gcc/gcc-{pkgver}/gcc-{pkgver}.tar.xz"]
+# http://gcc.cybermirror.org
+# https://ftpmirror.gnu.org
+# sources = [f"https://ftpmirror.gnu.org/gcc/gcc-{pkgver}/gcc-{pkgver}.tar.xz"]
+sources = [f"https://ftp.gwdg.de/pub/misc/gcc/releases//gcc-{pkgver}/gcc-{pkgver}.tar.xz"]
 depends = []
 
 def build(c):
