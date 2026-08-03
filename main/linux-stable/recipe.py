@@ -1,6 +1,6 @@
 recipever = 0
 pkgname = "linux-stable"
-pkgver = "7.1.5"
+pkgver = "7.1.6"
 pkgrel = 0
 pkgdesc = "Linux Kernel (stable)"
 url = "https://kernel.org/"
