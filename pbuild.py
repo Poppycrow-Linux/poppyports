@@ -525,7 +525,7 @@ if __name__ == "__main__":
             "-I",
             f"description:{recipe['pkgdesc']}",
             "-I",
-            f"arch:{ctx.ARCH}",
+            f"arch:{ctx.CROSS_ARCH}",
             "-I",
             f"license:{recipe['license']}",
             "-I",
