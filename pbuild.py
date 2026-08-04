@@ -24,6 +24,12 @@ REQUIRED_KEYS = {
     "pkgver",
 }  # this is capitalized because thats the idiomatic way to do consts in python guy guys  guys -QV
 
+KERNEL_ARCH_NAMES = {
+    "aarch64": "arm64",
+    "armv7": "arm",
+    "armhf": "arm",
+    "x86_64": "x86"
+}
 
 start_time = time.time()
 total_time = 0  # ms
@@ -132,7 +138,7 @@ def log(clr, *args):
 
 
 class BuildContext:  # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
-    ARCH = "x86_64"  # RUDE: fuck arm developer
+    ARCH = ""  # RUDE: fuck arm developer
     CFLAGS = ""  # "-Dick"
     CXXFLAGS = ""
     LDFLAGS = ""  # "-Dick2"
@@ -141,7 +147,7 @@ class BuildContext:  # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
     NPROC = 1
     LIBC = ""
 
-    def __init__(self, builddir, portdir, recipe):
+    def __init__(self, builddir, portdir, recipe, arch="x86_64"):
         self.BUILDDIR = builddir
         self.PORTDIR = portdir
         self.SRCDIR = os.path.join(builddir, "pkgsrc")
@@ -149,11 +155,27 @@ class BuildContext:  # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
         os.makedirs(self.SRCDIR, exist_ok=True)
         os.makedirs(self.PKGDIR, exist_ok=True)
 
+
+        if (not arch in recipe["arch"]) or ((type(recipe["arch"]) == str) and recipe["arch"] != arch):
+            raise InvalidRecipeError(
+                f"This recipe does not support compiling to {arch}!"
+            )
+
+        # cross compilationg
+        self.ARCH = "x86_64"#recipe["arch"]
+        self.CROSS_ARCH = arch#recipe["arch"]
+        self.IS_CROSS = False
+        if self.ARCH != self.CROSS_ARCH:
+            self.IS_CROSS = True
+        self.CROSS_TRIPLET = f"{self.CROSS_ARCH}-unknown-linux-gnu"
+        self.CROSS_TARGET = f"{self.CROSS_ARCH}-unknown-linux-"
+        # this is because the linux kernel uses arm64 instead of aarch64 for example
+        self.CROSS_KERNEL_ARCH = KERNEL_ARCH_NAMES[self.CROSS_ARCH] if self.CROSS_ARCH in KERNEL_ARCH_NAMES.keys() else self.CROSS_ARCH
+
         self.NPROC = os.cpu_count() if os.cpu_count() is not None else 1
-        self.LIBC = "glibc"  # switch to musl to break everything TODOn't: package musl
+        self.LIBC = "glibc"  # switch to musl to break everything TODO: package musl
         # i think this is wrong? ARCH would refer to our target architecture whereas recipe arch is the arch it can be built for
         # TODO: this should be replaced with if checks
-        self.ARCH = recipe["arch"]
         self.recipe = recipe
         self.recipe["depends"] = [
             self.LIBC if pkg == "libc" else pkg for pkg in self.recipe["depends"]
@@ -354,6 +376,7 @@ if __name__ == "__main__":
         "builddir", help="The directory to build the recipe in.", nargs="?"
     )
     parser.add_argument("-config", help="The config to use.", nargs="?")
+    parser.add_argument("-arch", help="The architecture to use for cross compilation.", nargs="?")
     parser.add_argument(
         "-signkey", help="Signature private key to use for apk signing", nargs="?"
     )
@@ -362,6 +385,9 @@ if __name__ == "__main__":
     CONFIGFILEPATH = "./pbuild.conf"
     if args.config:  # parse configfilepath earlier than the rest so we can override it
         CONFIGFILEPATH = args.config
+
+    if args.arch == None:
+        args.arch = "x86_64"
 
     # fallback variables
 
@@ -430,7 +456,7 @@ if __name__ == "__main__":
     log(None, f"Arguments used: {args}")
     recipe = read_recipe(f"{pkgpath}/recipe.py")
 
-    ctx = BuildContext(os.path.abspath(builddir), os.path.abspath(pkgpath), recipe)
+    ctx = BuildContext(os.path.abspath(builddir), os.path.abspath(pkgpath), recipe, args.arch)
     os.makedirs(ctx.BUILDDIR, exist_ok=True)
 
     outpath = f"{builddir}/{recipe['pkgname']}-{recipe['pkgver']}.apk"
