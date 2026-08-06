@@ -25,7 +25,6 @@ def build(c):
     c.sh("ninja", "all", cwd=bdir)
     # i feel like this should be something else?
     # it's not really a part of installation process and moreso prep work but doesn't fit into prepare chronologically either
-    # TODO: acutally use my free will as a fork and add a meson install or something?
     c.sh("mkdir", "-p", f"{c.PKGDIR}/usr/lib")
     c.sh("mkdir", "-p", f"{c.PKGDIR}/usr/lib/dinit.d")
     c.sh("mkdir", "-p", f"{c.PKGDIR}/usr/lib/dinit.d/early")
@@ -33,7 +32,11 @@ def build(c):
 
 # who loves cherrypicking?
 def install(c):
-    c.sh(f"cp -r {bdir}/early/scripts/init {c.PKGDIR}/init")
-    c.sh(f"chmod +x {c.PKGDIR}/init")
+    # TODO: make it provide the actual init when it works
+    # TODO: acutally use my free will as a fork and add a meson install or something?
+    # HACK: copy shit over manually
+    c.sh(f"cp -r {bdir}/early/scripts/init {c.PKGDIR}/init_poppy")
+    c.sh(f"chmod +x {c.PKGDIR}/init_poppy")
     c.sh(f"cp -r {bdir}/services/* {c.PKGDIR}/usr/lib/dinit.d")
     c.sh(f"cp -r {bdir}/early/ {c.PKGDIR}/usr/lib/dinit.d/")
+    c.sh(f"chmod -R +x {c.PKGDIR}/usr/lib/dinit.d/") # oops i forgot to set them as executable my bad
