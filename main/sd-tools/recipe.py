@@ -18,8 +18,8 @@ def build(c):
 
 # hastag fast
 def install(c):
-  c.sh("mkdir","-p",f"{c.PKGDIR}/bin")
   for i in ["sysusers", "tmpfiles"]:
-    c.sh(f"mkdir -p {c.PKGDIR}/usr/bin/{i}")
-    c.cp(f"{c.SRCDIR}/build/src/{i}/sd-{i}",f"{c.PKGDIR}/usr/bin/{i}")
-    c.lnk(f"{c.PKGDIR}/usr/bin/systemd-{i}", f"{c.PKGDIR}/usr/bin/{i}")
+    c.sh(f"mkdir -p {c.PKGDIR}/usr/bin")
+    c.cp(f"{c.SRCDIR}/build/src/{i}/sd-{i}",f"{c.PKGDIR}/usr/bin/")
+    c.sh(f"chmod +x {c.PKGDIR}/usr/bin/sd-{i}")
+    c.lnk(f"{c.PKGDIR}/usr/bin/systemd-{i}", f"{c.PKGDIR}/usr/bin/{i}") # supposedly deprecated but okay
