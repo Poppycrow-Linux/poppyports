@@ -13,7 +13,7 @@ depends = ["libc"]
 
 def build(c):
   c.SRCDIR += f"/xz-{pkgver}"
-  c.sh("./configure", "--disable-doc")
+  c.sh("./configure", "--disable-doc", "--prefix=/usr") #fix /usr/local nonsense
   c.sh("make", f"-j{c.NPROC}")
 
 def install(c):
