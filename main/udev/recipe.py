@@ -38,23 +38,21 @@ def build(c):
         "-Dvconsole=false",
     )
 
-    c.sh(f"""bash (grep "'name' :" {c.SRCDIR}/src/udev/meson.build | awk '{{print $3}}' | tr -d ",'" | grep -v 'udevadm') &&
-    ninja udevadm systemd-hwdb $(ninja -n | grep -Eo '(src/(lib)?udev|rules.d|hwdb.d)/[^ ]*') $(realpath libudev.so --relative-to .) > {builddir}/udev_helpers.txt
-        """, shell = True, cwd=builddir)
-
     c.sh(
         "bash", "-lc",
         f"""
         cd {builddir} &&
         udev_helpers=$(grep "'name' :" {c.SRCDIR}/src/udev/meson.build | awk '{{print $3}}' | tr -d ",'" | grep -v 'udevadm') &&
+        printf '%s\n' "$udev_helpers" > udev_helpers.txt &&
         ninja udevadm systemd-hwdb $(ninja -n | grep -Eo '(src/(lib)?udev|rules.d|hwdb.d)/[^ ]*') $(realpath libudev.so --relative-to .) $udev_helpers
-        """, shell = True
+        """,
+        shell=True,
     )
-
-
 
 def install(c):
     builddir = f"{c.SRCDIR}/build"
+    udev_helpers = open(f"{builddir}/udev_helpers.txt").read().splitlines()
+
     c.sh("install", "-vm755", "-d", f"{c.PKGDIR}/usr/bin")
     c.sh("install", "-vm755", "-d", f"{c.PKGDIR}/usr/sbin")
     c.sh("install", "-vm755", "-d", f"{c.PKGDIR}/usr/lib/udev/hwdb.d")
@@ -71,12 +69,13 @@ def install(c):
     c.sh("ln", "-svfn", "../bin/udevadm", f"{c.PKGDIR}/usr/sbin/udevd")
     c.sh("cp", "-av", f"{builddir}/libudev.so", f"{c.PKGDIR}/usr/lib/")
     c.sh("cp", "-av", f"{builddir}/libudev.so.*", f"{c.PKGDIR}/usr/lib/", shell = True)
-    #c.sh("cp", "-av", f"{builddir}/libudev.so{,*[0-9]}", f"{c.PKGDIR}/usr/lib/")
     c.sh("install", "-vm644", f"{c.SRCDIR}/src/libudev/libudev.h", f"{c.PKGDIR}/usr/include/", shell = True)
     c.sh("install", "-vm644", f"{builddir}/src/libudev/*.pc", f"{c.PKGDIR}/usr/lib/pkgconfig/", shell = True)
     c.sh("install", "-vm644", f"{builddir}/src/udev/*.pc", f"{c.PKGDIR}/usr/share/pkgconfig/", shell = True)
     c.sh("install", "-vm644", f"{c.SRCDIR}/src/udev/udev.conf", f"{c.PKGDIR}/etc/udev/", shell = True)
     c.sh("install", "-vm644", f"{c.SRCDIR}/rules.d/*", f"{c.PKGDIR}/usr/lib/udev/rules.d/", shell = True)
     c.sh("install", "-vm644", f"{c.SRCDIR}/hwdb.d/*", f"{c.PKGDIR}/usr/lib/udev/hwdb.d/", shell = True)
-    c.sh("install", "-vm755", "$udev_helpers", f"{c.PKGDIR}/usr/lib/udev", shell = True)
+    c.sh("install", "-vm755", f"{builddir}/udev_helpers.txt", f"{c.PKGDIR}/usr/lib/udev/")
+    for helper in udev_helpers:
+        c.sh("install", "-vm755", f"{builddir}/{helper}", f"{c.PKGDIR}/usr/lib/udev/")
     c.sh("install", "-vm644", f"{c.SRCDIR}/network/99-default.link", f"{c.PKGDIR}/usr/lib/udev/network")
