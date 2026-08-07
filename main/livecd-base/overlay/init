@@ -23,6 +23,7 @@ mount -t devtmpfs /dev
 # dmesg -n 1
 
 # figlet "Welcome to POPPYCROW LINUX"
-
-/init_poppy
+echo "You are dropped into the debugging shell."
+echo "Dinit supposedly works but doesn't drop you into a shell. When you feel like you fixed it in this session, run exit or dinit."
 /bin/sh
+/init_poppy
