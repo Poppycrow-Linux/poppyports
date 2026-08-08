@@ -18,15 +18,21 @@ depends = [
     "apps/figlet",
     "apps/fastfetch",
     "main/apk-tools",
+    "main/sd-tools",
     "main/ncurses",
     "main/udev",
     "main/zlib",
     "main/e2fsprogs",
     "main/dinit",
+    "main/xz",
+    "main/nyagetty",
     "main/dinit-tiny-devd",
     "main/openssl",
     "apps/parted",
-    "main/libcap"
+    "main/libcap",
+    "main/acl",
+    "main/nyagetty-dinit",
+    "main/kmod"
 ]
 
 
@@ -35,5 +41,5 @@ def build(c):
 
 
 def install(c):
-   c.sh("chmod", "+x", f"{c.PORTDIR}/overlay/init_old")  # make init executable
+   c.sh("chmod", "+x", f"{c.PORTDIR}/overlay/init")  # make init executable
    c.cp(f"{c.PORTDIR}/overlay/.", c.PKGDIR)

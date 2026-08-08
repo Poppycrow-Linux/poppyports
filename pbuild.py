@@ -15,6 +15,8 @@ import time
 import urllib.request
 from enum import Enum
 
+from numpy import append
+
 REQUIRED_KEYS = {
     "sources",
     "pkgname",
@@ -354,6 +356,14 @@ if __name__ == "__main__":
         "builddir", help="The directory to build the recipe in.", nargs="?"
     )
     parser.add_argument("-config", help="The config to use.", nargs="?")
+    parser.add_argument("-portsdir", help="Folder with ports in it.", nargs="?")
+    parser.add_argument(
+        "-appendportsdirtopath",
+        "-apd",
+        action=OptionalBoolAction,
+        help="Appends the ports directory to the path of the recipe to build. Defaults to true, so syntax like pbuild main/linux-stable continues to work.",
+        nargs="?",
+    )
     parser.add_argument(
         "-signkey", help="Signature private key to use for apk signing", nargs="?"
     )
@@ -364,7 +374,8 @@ if __name__ == "__main__":
         CONFIGFILEPATH = args.config
 
     # fallback variables
-
+    appendportsdirtopath = True
+    portsdir = "./recipes"
     ignoreintegrity = False
     color = True
     rebuild = False
@@ -382,6 +393,8 @@ if __name__ == "__main__":
             "DefaultBuildPath": "./build",
             "AssumeRebuild": "no",
             "AssumeIgnoreIntegrity": "no",
+            "PortsPath": "./recipes",
+            "AppendPortsPathToRecipePath" : "yes"
         }
         configparser["Display"] = {
             "Color": "yes",
@@ -397,6 +410,7 @@ if __name__ == "__main__":
             configfile
         )  ## TODO: write default config sections if missing. maybe not needed (question Mark), since the defaults are kind of above
 
+    appendportsdirtopath = configparser.getboolean("Build", "AppendPortsPathToRecipePath")
     ignoreintegrity = configparser.getboolean("Build", "AssumeIgnoreIntegrity")
     redownload = configparser.getboolean("Build", "AssumeRedownload")
     builddir = configparser["Build"]["DefaultBuildPath"]
@@ -405,6 +419,8 @@ if __name__ == "__main__":
     rebuild = configparser.getboolean("Build", "AssumeRebuild")
     show_bs_breakdown = configparser.getboolean("Display", "BuildStateBreakdown")
 
+    if args.appendportsdirtopath:
+        appendportsdirtopath = args.appendportsdirtopath
     if args.pkgpath != None:
         pkgpath = args.pkgpath  # ifs added so that cmdline functions cannot override shit when they are not set
     if args.ignoreintegrity != None:
@@ -428,7 +444,10 @@ if __name__ == "__main__":
     change_status(State.READ)
     log(None, "READING RECIPE")
     log(None, f"Arguments used: {args}")
-    recipe = read_recipe(f"{pkgpath}/recipe.py")
+    if appendportsdirtopath:
+        recipe = read_recipe(f"{portsdir}/{pkgpath}/recipe.py")
+    else:
+        recipe = read_recipe(f"{pkgpath}/recipe.py")
 
     ctx = BuildContext(os.path.abspath(builddir), os.path.abspath(pkgpath), recipe)
     os.makedirs(ctx.BUILDDIR, exist_ok=True)

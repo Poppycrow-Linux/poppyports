@@ -18,11 +18,13 @@ depends = [
   "bsdgames",
   "figlet",
   # this is BAD syntax and will not work!!
-  #"editors/nano",
+  "nano",
   #"main/wayland",
   #"xorg/xorg-xserver",
   #"main/libinput",
-  #"main/dinit",
+  "dinit",
+  "bash",
+  "libstdc++-v3"
   #"main/libffi",
   #"main/libdrm",
   #"main/libxkbcommon"
