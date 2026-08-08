@@ -7,7 +7,7 @@ url = "https://github.com/chimera-linux/nyagetty"
 arch = "x86_64"
 license = "0BSD"
 
-sources = [f"https://github.com/chimera-linux/nyagetty/archive/refs/tags/v2.38.99.tar.gz"]
+sources = [f"https://github.com/chimera-linux/nyagetty/archive/refs/tags/v{pkgver}.tar.gz"] # i dont think this is getting updated anytime soon
 depends = []
 
 def build(c):
@@ -19,3 +19,10 @@ def build(c):
 def install(c):
   c.sh("mkdir","-p",f"{c.PKGDIR}/bin")
   c.cp(f"{c.SRCDIR}/build/agetty",f"{c.PKGDIR}/bin/agetty")
+  # services
+  c.sh("mkdir","-p",f"{c.PKGDIR}/usr/")
+  c.sh("mkdir","-p",f"{c.PKGDIR}/usr/lib")
+  c.sh("mkdir","-p",f"{c.PKGDIR}/usr/lib/dinit.d")
+  c.cp(f"{c.PORTDIR}/svc/.", f"{c.PKGDIR}/usr/lib/dinit.d")
+  c.cp(f"{c.PORTDIR}/sh/.", f"{c.PKGDIR}/usr/lib/")
+  c.sh(f"chmod -R +x {c.PKGDIR}/usr/lib/")
