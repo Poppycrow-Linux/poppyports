@@ -15,8 +15,6 @@ import time
 import urllib.request
 from enum import Enum
 
-from numpy import append
-
 REQUIRED_KEYS = {
     "sources",
     "pkgname",
@@ -444,12 +442,15 @@ if __name__ == "__main__":
     change_status(State.READ)
     log(None, "READING RECIPE")
     log(None, f"Arguments used: {args}")
-    if appendportsdirtopath:
-        recipe = read_recipe(f"{portsdir}/{pkgpath}/recipe.py")
-    else:
-        recipe = read_recipe(f"{pkgpath}/recipe.py")
 
-    ctx = BuildContext(os.path.abspath(builddir), os.path.abspath(pkgpath), recipe)
+    if appendportsdirtopath:
+        pkgpath_real = f"{portsdir}/{pkgpath}"
+    else:
+        pkgpath_real = pkgpath
+    
+    recipe = read_recipe(f"{pkgpath_real}/recipe.py")
+
+    ctx = BuildContext(os.path.abspath(builddir), os.path.abspath(pkgpath_real), recipe)
     os.makedirs(ctx.BUILDDIR, exist_ok=True)
 
     outpath = f"{builddir}/{recipe['pkgname']}-{recipe['pkgver']}.apk"
