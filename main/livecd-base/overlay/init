@@ -9,11 +9,12 @@ mount -t devtmpfs /dev
 #mount -t tmpfs /dev/shm
 #mount -t proc /proc
 #mount -t sysfs /sys
-#mkdir /sys/fs/cgroup
+mkdir /sys/fs/cgroup
 
-#mount -t cgroup /sys/fs/cgroup
-#mount -t tmpfs /run
-#mount -t proc proc /proc
+#mount -t tmpfs cgroup_root /sys/fs/cgroup
+mount -t cgroup /sys/fs/cgroup
+mount -t tmpfs /run
+mount -t proc proc /proc
 #mount -t sysfs sysfs /sys
 #mount -t devtmpfs devtmpfs /dev
 #mkdir -p /dev/pts /dev/shm
