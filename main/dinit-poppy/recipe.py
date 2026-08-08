@@ -38,5 +38,8 @@ def install(c):
     c.sh(f"cp -r {bdir}/early/scripts/init {c.PKGDIR}/init_poppy")
     c.sh(f"chmod +x {c.PKGDIR}/init_poppy")
     c.sh(f"cp -r {bdir}/services/* {c.PKGDIR}/usr/lib/dinit.d")
+    c.sh(f"mkdir -p {c.PKGDIR}/etc/dinit.d/boot.d")
+    c.sh(f"mkdir -p {c.PKGDIR}/usr/lib/dinit.d/")
+    c.sh(f"mkdir -p {c.PKGDIR}/usr/lib/dinit.d/boot.d")
     c.sh(f"cp -r {bdir}/early/ {c.PKGDIR}/usr/lib/dinit.d/")
     c.sh(f"chmod -R +x {c.PKGDIR}/usr/lib/dinit.d/") # oops i forgot to set them as executable my bad
