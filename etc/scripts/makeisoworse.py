@@ -17,7 +17,7 @@ force = args.force
 
 print("Reading livecd-base dependencies")
 recipe = {}
-with open("main/livecd-base/recipe.py", "r") as f:
+with open("recipes/main/livecd-base/recipe.py", "r") as f:
   exec(f.read(), recipe)
 
 depends = ["main/livecd-base"] + recipe["depends"]
@@ -58,14 +58,14 @@ subprocess.run(("mkdir","-p","build/rootfs/usr/bin"))
 subprocess.run(("mkdir","-p","build/rootfs/usr/lib"))
 subprocess.run(("ln", "-s", "usr/bin", "bin"), cwd= os.getcwd()+"/build/rootfs")
 subprocess.run(("ln", "-s", "usr/bin", "sbin"), cwd= os.getcwd()+"/build/rootfs")
-subprocess.run(("ln", "-s", "bin", "usr/sbin"), cwd=os.getcwd()+"/build/rootfs")
+subprocess.run(("ln", "-s", "bin", "sbin"), cwd=os.getcwd()+"/build/rootfs/usr")
 subprocess.run(("ln","-s","usr/lib","lib"),cwd=os.getcwd()+"/build/rootfs")
 #subprocess.run(("ln","-s","usr/lib","lib32"),cwd=os.getcwd()+"/build/rootfs")
 subprocess.run(("ln","-s","usr/lib","lib64"),cwd=os.getcwd()+"/build/rootfs")
 subprocess.run(("ln","-s","lib","lib64"),cwd=os.getcwd()+"/build/rootfs/usr")
 #subprocess.run(("ln","-s","lib","lib32"),cwd=os.getcwd()+"/build/rootfs/usr")
-subprocess.run(("ln","-s",".","./x86_64-linux-gnu"),cwd=os.getcwd()+"/build/rootfs/lib")
-subprocess.run(("rsync","-r","-v","main/poppy-base/overlay/.","build/rootfs/"))
+subprocess.run(("ln","-s",".","./x86_64-linux-gnu"),cwd=os.getcwd()+"/build/rootfs/lib") # ugly hack
+subprocess.run(("rsync","-r","-v","recipes/main/poppy-base/overlay/.","build/rootfs/"))
 
 
 for dep in depends:
