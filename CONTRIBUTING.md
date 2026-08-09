@@ -6,6 +6,15 @@ When contributing, make sure you stick to these simple rules:
 3. Don't introduce needless dependencies (if you do want to introduce a dependency, explain why). 
 4. Make sure the recipe you're adding isn't one of a banned package.
 
+## Formatting guidelines (style guide)
+- Use **2 spaces** for indentation.
+- Naming should follow the python conventions (snake_case CONSTANTS ClassNamesInPascal).
+- Single-expressions statements should be inlined i.e. `if x: do_y()`
+- Trailing commas are allowed.
+- Type hints are optional (hence the hints) but recommended.
+- Use `# TODO:`, `# FIXME:` etc. comment conventions for bugs and such.
+
+
 ## Banned packages
 - Xlibre
 - Any hypr* utility
