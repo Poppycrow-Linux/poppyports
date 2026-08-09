@@ -5,7 +5,7 @@
 # WORK IN PROGRESS! Remove this comment once working
 set -euo pipefail
 
-TARGET="${TARGET:-x86_64-linux-gnu}"
+TARGET="${TARGET:-x86_64-crowlinux-gnu}"
 PREFIX="${PREFIX:-$PWD/build/ccstrap}"
 
 BINUTILS_VERSION="2.47"
@@ -35,7 +35,7 @@ for cmd in bash gcc g++ make bison flex python3 wget tar xz bzip2 gzip patch ldc
 done
 
 
-export PATH="$PREFIX/bin:$PATH"
+export PATH="$SYSROOT/bin:$SYSROOT/tools/bin:$PATH"
 export MAKEFLAGS="-j$(nproc)"
 
 download() {
