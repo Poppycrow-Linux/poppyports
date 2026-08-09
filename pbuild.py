@@ -15,7 +15,6 @@ import time
 import urllib.request
 from enum import Enum
 
-
 # somebody move ALL of this into a class please
 start_time = time.time()
 total_time = 0  # ms
@@ -183,7 +182,7 @@ def read_recipe(path):
   with open(path, "r") as f:
     recipe_def = {}
     exec(f.read(), recipe_def)
-    
+
     REQUIRED_KEYS = { "sources", "pkgname", "build", "install", "arch", "pkgver" }
     missing_keys = REQUIRED_KEYS - recipe_def.keys()  # this is set subtraction
     if missing_keys:
@@ -363,10 +362,10 @@ def main():
 
   # TODO: move config reading to a separate function
 
-  configparser = configparser.ConfigParser()
-  configparser.read(CONFIGFILEPATH)
-  if configparser.sections() == []:
-    configparser["Build"] = {
+  cfgparser = configparser.ConfigParser()
+  cfgparser.read(CONFIGFILEPATH)
+  if cfgparser.sections() == []:
+    cfgparser["Build"] = {
       "AssumeRebuild": "no",
       "AssumeRedownload": "no",
       "DefaultBuildPath": "./build",
@@ -375,7 +374,7 @@ def main():
       "PortsPath": "./recipes",
       "AppendPortsPathToRecipePath": "yes",
     }
-    configparser["Display"] = {
+    cfgparser["Display"] = {
       "Color": "yes",
       "SupressNonErrorLogs": "no",
       "BuildStateBreakdown": "yes",
@@ -384,16 +383,16 @@ def main():
 
   if os.path.getsize(CONFIGFILEPATH) == 0:
     ## TODO: write default config sections if missing. maybe not needed (question Mark), since the defaults are kind of above
-    configparser.write(configfile)
+    cfgparser.write(configfile)
 
-  appendportsdirtopath = configparser.getboolean("Build", "AppendPortsPathToRecipePath")
-  ignoreintegrity = configparser.getboolean("Build", "AssumeIgnoreIntegrity")
-  redownload = configparser.getboolean("Build", "AssumeRedownload")
-  builddir = configparser["Build"]["DefaultBuildPath"]
-  color = configparser.getboolean("Display", "Color")
-  supressnonerrorlogs = configparser.getboolean("Display", "SupressNonErrorLogs")
-  rebuild = configparser.getboolean("Build", "AssumeRebuild")
-  show_bs_breakdown = configparser.getboolean("Display", "BuildStateBreakdown")
+  appendportsdirtopath = cfgparser.getboolean("Build", "AppendPortsPathToRecipePath")
+  ignoreintegrity = cfgparser.getboolean("Build", "AssumeIgnoreIntegrity")
+  redownload = cfgparser.getboolean("Build", "AssumeRedownload")
+  builddir = cfgparser["Build"]["DefaultBuildPath"]
+  color = cfgparser.getboolean("Display", "Color")
+  supressnonerrorlogs = cfgparser.getboolean("Display", "SupressNonErrorLogs")
+  rebuild = cfgparser.getboolean("Build", "AssumeRebuild")
+  show_bs_breakdown = cfgparser.getboolean("Display", "BuildStateBreakdown")
 
   if args.appendportsdirtopath:
     appendportsdirtopath = args.appendportsdirtopath
