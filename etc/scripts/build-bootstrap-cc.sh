@@ -5,13 +5,13 @@
 # WORK IN PROGRESS! Remove this comment once working
 set -euo pipefail
 
-TARGET="${TARGET:-x86_64-crowlinux-gnu}"
+TARGET="${TARGET:-x86_64-crow-linux-gnu}"
 PREFIX="${PREFIX:-$PWD/build/ccstrap}"
 
 BINUTILS_VERSION="2.47"
 GCC_VERSION="16.2.0"
 GLIBC_VERSION="2.44"
-HEADERS_VERSION="7.1.7"
+HEADERS_VERSION="7.1.8"
 
 
 
@@ -92,7 +92,6 @@ rm -rf "$BUILDDIR"
 mkdir -p "$BUILDDIR"
 cd "$BUILDDIR"
 
-# NOTE: i got 'configure: error: bootstrapping with --disable-libstdcxx is not supported' ??!?????!@?%?
 "$SOURCES/gcc/configure" \
   --target="$TARGET" --prefix="$SYSROOT/tools" --with-sysroot="$SYSROOT" \
   --with-glibc-version=$GLIBC_VERSION \
@@ -104,8 +103,8 @@ cd "$BUILDDIR"
   --disable-multilib \
   --disable-threads \
   --disable-libatomic --disable-libgomp --disable-libquadmath \
-  --disable-libssp --disable-libvtv \
-  --enable-languages=c,c++
+  --disable-libssp --disable-libvtv --disable-libstdcxx \
+  --enable-languages=c
 
 make
 make install
@@ -138,6 +137,29 @@ make DESTDIR="$SYSROOT" install
 sed '/RTLDLIST=/s@/usr@@g' -i $SYSROOT/usr/bin/ldd
 
 # TODO: tests from https://www.linuxfromscratch.org/lfs/view/systemd/chapter05/glibc.html
+
+# gcc: part 2
+BUILDDIR="$BUILD/gcc2"
+rm -rf "$BUILDDIR"
+mkdir -p "$BUILDDIR"
+cd "$BUILDDIR"
+
+"$SOURCES/gcc/configure" \
+  --build="$GUESS" --target="$TARGET" --prefix=/usr --with-sysroot="$SYSROOT" \
+  --with-glibc-version=$GLIBC_VERSION \
+  --enable-default-pie --enable-default-ssp \
+  --disable-fixincludes \
+  --disable-nls \
+  --disable-multilib \
+  --disable-threads \
+  --disable-libatomic --disable-libgomp --disable-libquadmath \
+  --disable-libssp --disable-libvtv --disable-libsanitizer \
+  --enable-languages=c,c++ \
+  CXX_FOR_TARGET="$TARGET-gcc -nostdinc++"
+
+
+make
+make DESTDIR="$SYSROOT" install
 
 
 # libstdc++ from gcc
