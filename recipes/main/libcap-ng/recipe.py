@@ -13,7 +13,7 @@ sbu = 0.1
 
 sources = [f"{url}/archive/refs/tags/v{pkgver}.tar.gz"]
 depends = []
-makedepends = ["make", "attr-devel", "linux-headers", "pkgconf", "perl"]
+makedepends = ["make", "linux-headers", "pkgconf"]
 
 def build(c):
   c.SRCDIR = c.SRCDIR + f"/{pkgname}-{pkgver}"
