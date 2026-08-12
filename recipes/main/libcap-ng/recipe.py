@@ -7,7 +7,6 @@ url = "https://github.com/stevegrubb/libcap-ng"
 arch = "x86_64"
 license = "GPL-2.0-only"
 
-sbu = 0.1
 
 
 
