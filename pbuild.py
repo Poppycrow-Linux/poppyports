@@ -7,6 +7,7 @@ import argparse
 import configparser
 import hashlib
 import os
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -430,6 +431,13 @@ def main():
   recipe = read_recipe(f"{pkgpath_real}/recipe.py")
 
   ctx = BuildContext(os.path.abspath(builddir), os.path.abspath(pkgpath_real), recipe)
+
+  # ok so normally I would make this a config option but removing the pkgdir is neccesary to avoid
+  # accidentally including the leftover files from unsuccessful builds.
+  if os.path.exists(ctx.PKGDIR):
+      shutil.rmtree(ctx.PKGDIR)
+      log(Colors.SH_COMMAND, f"Removing {ctx.PKGDIR}")
+
   os.makedirs(ctx.BUILDDIR, exist_ok=True)
 
   outpath = f"{builddir}/{recipe['pkgname']}-{recipe['pkgver']}.apk"
