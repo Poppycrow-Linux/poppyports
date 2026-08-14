@@ -9,8 +9,8 @@ license = "Apache-2.0"
 # https://github.com/phkaeser/wlmaker/releases/download/v0.8.1/wlmaker-0.8.1.tar.gz
 sources = [f"{url}/releases/download/v{pkgver}/{pkgname}-{pkgver}.tar.gz"]
 
-depends = ['bison', 'clang', 'flex', 'git', 'libcairo2-dev', 'libncurses-dev', 'libwlroots-0.18-dev', 'pkg-config', 'plantuml', 'xwayland']
-makedepends = ['gcc', 'cmake', 'doxygen', 'wayland-protocols', 'git']
+depends = ['bison', 'flex', 'git', 'libcairo2-dev', 'libncurses-dev', 'libwlroots-0.18-dev', 'pkg-config', 'plantuml', 'xwayland']
+makedepends = ['gcc', 'cmake', 'doxygen', 'wayland-protocols', 'git', 'clang']
 
 def build(c):
   c.SRCDIR = c.SRCDIR + f"/{pkgname}-{pkgver}" # TODO fix this is because tar files have a top level name
