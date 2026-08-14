@@ -434,9 +434,7 @@ def main():
 
   # ok so normally I would make this a config option but removing the pkgdir is neccesary to avoid
   # accidentally including the leftover files from unsuccessful builds.
-  if os.path.exists(ctx.PKGDIR):
-      shutil.rmtree(ctx.PKGDIR)
-      log(Colors.SH_COMMAND, f"Removing {ctx.PKGDIR}")
+
 
   os.makedirs(ctx.BUILDDIR, exist_ok=True)
 
@@ -465,6 +463,9 @@ def main():
 
   if not skip_extracting:
     change_status(State.EXTRACT)
+    if os.path.exists(ctx.PKGDIR):
+        shutil.rmtree(ctx.PKGDIR)
+        log(Colors.SH_COMMAND, f"Removing {ctx.PKGDIR}")
     log(None, "Extracting source...")
     extract_src(ctx, recipe)
 
