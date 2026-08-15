@@ -13,6 +13,9 @@
 # TODO: remove the tiny devd package once this one works.
 # - valeradx NOTDINIT
 
+# more findings: udevd IS a symlink to udevd i am just an idiot
+# - valeradudev=true
+
 recipever = 0
 pkgname = "dinit-chimera-udev" # making a fork wouldn't really make sense since idk what there is to improve
 pkgver = "0.1.0"
@@ -45,6 +48,7 @@ def build(c):
 def install(c):
   c.sh(f"mkdir -p {c.PKGDIR}/usr/lib/dinit.d/early/helpers")
   c.sh(f"mkdir -p {c.PKGDIR}/usr/lib/dinit.d/boot.d")
+  c.sh(f"mkdir -p {c.PKGDIR}/usr/libexec/")
 
   for i in "devmon", "devclient":
       c.cp(f"{bdir}/helpers/{i}", f"{c.PKGDIR}/usr/lib/dinit.d/early/helpers/{i}")
@@ -52,4 +56,7 @@ def install(c):
       c.cp(f"{c.PORTDIR}/files/udevd.wrapper", f"{c.PKGDIR}/usr/lib/udevd.wrapper")
       c.sh(f"chmod +x {c.PKGDIR}/usr/lib/udevd.wrapper")
       c.cp(f"{c.PORTDIR}/files/dinit-devd", f"{c.PKGDIR}/usr/lib/dinit-devd")
+      c.cp(f"{c.PORTDIR}/files/dinit-devd", f"{c.PKGDIR}/usr/libexec/dinit-devd")
       c.sh(f"chmod +x {c.PKGDIR}/usr/lib/dinit-devd")
+      c.sh(f"chmod +x {c.PKGDIR}/usr/libexec/dinit-devd")
+      c.cp(f"{c.PORTDIR}/files/udevd", f"{c.PKGDIR}/usr/lib/dinit.d/udevd")
