@@ -54,4 +54,4 @@ echo "Dinit supposedly works but doesn't drop you into a shell. (well i forcibly
     dinitctl status agetty > /dev/ttyS0 2>&1
 ) &
 
-exec dinit
+exec /init_poppy
