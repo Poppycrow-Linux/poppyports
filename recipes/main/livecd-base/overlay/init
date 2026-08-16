@@ -24,9 +24,11 @@ mount -t proc proc /proc
 # dmesg -n 1
 
 # figlet "Welcome to POPPYCROW LINUX"
-echo "You are dropped into the debugging shell."
-echo "Dinit supposedly works but doesn't drop you into a shell. (well i forcibly interrupt it to give you a shell) When you feel like you fixed it in this session, run exit"
-/bin/sh
+echo enabling agetty and udevd...
+dinitctl --offline enable agetty
+dinitctl --offline enable udevd
+echo root password is poppycrow. remember that.
+echo "TODO: make it generate an initramfs with a more convoluted method and hooks to free the manual labour of mounting shit on our own"
 (
     sleep 5
 
@@ -52,6 +54,8 @@ echo "Dinit supposedly works but doesn't drop you into a shell. (well i forcibly
 
     echo "agetty" > /dev/ttyS0
     dinitctl status agetty > /dev/ttyS0 2>&1
+
+    echo "just as a reminder root password is poppycrow" > /dev/ttyS0
 ) &
 
 exec /init_poppy
