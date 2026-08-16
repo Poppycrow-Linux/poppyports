@@ -25,6 +25,33 @@ mount -t proc proc /proc
 
 # figlet "Welcome to POPPYCROW LINUX"
 echo "You are dropped into the debugging shell."
-echo "Dinit supposedly works but doesn't drop you into a shell. When you feel like you fixed it in this session, run exit or dinit."
+echo "Dinit supposedly works but doesn't drop you into a shell. (well i forcibly interrupt it to give you a shell) When you feel like you fixed it in this session, run exit"
 /bin/sh
-/init_poppy
+(
+    sleep 5
+
+    echo "dinit poop" > /dev/ttyS0
+
+    echo "list of all " > /dev/ttyS0
+    dinitctl list > /dev/ttyS0 2>&1
+
+    echo "login.target" > /dev/ttyS0
+    dinitctl status login.target > /dev/ttyS0 2>&1
+
+    echo "pre-network.target" > /dev/ttyS0
+    dinitctl status pre-network.target > /dev/ttyS0 2>&1
+
+    echo "network.target" > /dev/ttyS0
+    dinitctl status network.target > /dev/ttyS0 2>&1
+
+    echo "system" > /dev/ttyS0
+    dinitctl status system > /dev/ttyS0 2>&1
+
+    echo "boot" > /dev/ttyS0
+    dinitctl status boot > /dev/ttyS0 2>&1
+
+    echo "agetty" > /dev/ttyS0
+    dinitctl status agetty > /dev/ttyS0 2>&1
+) &
+
+exec dinit
