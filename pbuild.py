@@ -443,6 +443,9 @@ def main():
     log(Colors.WARNING, f"Skipping build as {outpath} already exists. If you need to rebuild, pass the -rebuild flag to force rebuilding.")
     sys.exit(0)
 
+  if redownload and os.path.exists(ctx.SRCDIR):
+      log(Colors.SH_COMMAND, f"Removing {ctx.SRCDIR} as redownload flag has been passed!")
+      shutil.rmtree(ctx.SRCDIR)
   change_status(State.DOWNLOAD)
   log(None, "Downloading files")
   skip_extracting = download_files(ctx, recipe, redownload)
