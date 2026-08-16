@@ -75,6 +75,7 @@ Right now you run the `etc/scripts/makeisoworse.py` script. If you want a specif
 `qemu-system-x86_64 -kernel ./isoroot/boot/bzImage -initrd init.cpio -m 8G -append "console=ttyS0" -nographic`
 While running things in the nographic mode is far from necessary, this allows us to print dinit states and whatnot while it appears to "hang".
 For even more information on how the system is built, you can inspect the makeisoworse script itself, livecd-base and base-poppy recipes.
+Do note, that as of now, you need to enable agetty and udevd manually before exiting to dinit and continuing to boot, otherwise you might get seemingly stuck on local.target. 
 
 
 ## Subtitles?
