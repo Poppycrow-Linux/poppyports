@@ -10,7 +10,8 @@ license = "BSD-3-Clause"
 
 sources = [f"https://codeberg.org/dcantrell/bsdutils/archive/{pkgver}-RELEASE.tar.gz"]
 sha256sum = ["26f528e1cd4ce66e2d8108620df1883ff577d5e4591b884336e51ac56af18717"]
-depends = ["libc"]
+depends = ["libc", "libxo", "libedit", "ncurses", "openssl"]
+makedepends = ['byacc', 'meson']
 
 
 def build(c):
