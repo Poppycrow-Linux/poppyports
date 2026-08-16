@@ -24,7 +24,9 @@ come with their own Poppycrow provided patches that provide distro-specific feat
 
 ### Usage
 ```
-usage: pbuild [-h] [-ignoreintegrity [IGNOREINTEGRITY]] [-fresh [FRESH]] [-rebuild [REBUILD]] [-color [COLOR]] [-supressnonerrorlogs [SUPRESSNONERRORLOGS]] [-config [CONFIG]] pkgpath [builddir]
+usage: pbuild [-h] [-ignoreintegrity [IGNOREINTEGRITY]] [-fresh [FRESH]] [-rebuild [REBUILD]] [-color [COLOR]] [-buildstatebreakdown [BUILDSTATEBREAKDOWN]] [-supressnonerrorlogs [SUPRESSNONERRORLOGS]]
+              [-config [CONFIG]] [-portsdir [PORTSDIR]] [-appendportsdirtopath [APPENDPORTSDIRTOPATH]] [-signkey [SIGNKEY]]
+              pkgpath [builddir]
 
 Compiles apk files to be used in Poppycrow Linux repos.
 
@@ -34,15 +36,23 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
-  -ignoreintegrity, -ii, -ignore-broken-files [true/false]
+  -ignoreintegrity, -ii, -ignore-broken-files [IGNOREINTEGRITY]
                         Ignore any checksum errors and continue building the package.
-  -fresh, -new, -redownload [true/false]
+  -fresh, -new, -redownload [FRESH]
                         Redownload files even if they are already present and pass the integrity checks.
-  -rebuild [true/false]    Force rebuild even when package is already built.
-  -color [true/false]        Highlight warnings, errors and build completion.
-  -supressnonerrorlogs, -clean-logs [true/false]
+  -rebuild [REBUILD]    Force rebuild even when package is already built.
+  -color [COLOR]        Highlight warnings, errors and build completion.
+  -buildstatebreakdown, -bsbd, -bb [BUILDSTATEBREAKDOWN]
+                        Show build state breakdown.
+  -supressnonerrorlogs, -clean-logs [SUPRESSNONERRORLOGS]
                         Supress logs that aren't warnings, errors, or completion messages
-  -config [PATH]      The config to use.
+  -config [CONFIG]      The config to use.
+  -portsdir [PORTSDIR]  Folder with ports in it.
+  -appendportsdirtopath, -apd [APPENDPORTSDIRTOPATH]
+                        Appends the ports directory to the path of the recipe to build. Defaults to true, so syntax like pbuild main/linux-stable continues to work.
+  -signkey [SIGNKEY]    Signature private key to use for apk signing
+
+See more @ https://codeberg.org/Poppycrow-Linux/poppyports
 ```
 
 
@@ -59,6 +69,12 @@ We provide our own build script for a patched kernel with a rootfs image:
 `python3 scripts/makeisoworse.py`
 
 (Please note, in this early development stage, this script does not build a bootable ISO. You must boot it with qemu-system manually.)
+
+## How do I boot and test my packages?
+Right now you run the `etc/scripts/makeisoworse.py` script. If you want a specific package to be rebuit as part of the makeisoworse process, just delete its respective folder from build/pkg. After the process finishes, you gain the aforementioned build/pkg directory, along with isoroot, which is currently only used to output the bzImage, and the rootfs directory. To run the system that's just been built with makeisoworse, while inside the build directory run the following command:
+`qemu-system-x86_64 -kernel ./isoroot/boot/bzImage -initrd init.cpio -m 8G -append "console=ttyS0" -nographic`
+While running things in the nographic mode is far from necessary, this allows us to print dinit states and whatnot while it appears to "hang".
+For even more information on how the system is built, you can inspect the makeisoworse script itself, livecd-base and base-poppy recipes.
 
 
 ## Subtitles?
