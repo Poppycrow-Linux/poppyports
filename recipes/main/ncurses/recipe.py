@@ -16,7 +16,7 @@ depends = ["libc"]
 
 def build(c):
   c.SRCDIR = c.SRCDIR + f"/{pkgname}-{pkgver}"
-  c.sh("./configure","--enable-widec","--with-shared","--without-normal","--without-debug","--with-termlib", "--with-cxx-shared", "--with-cxx-binding", "--enable-pc-files", "--disable-stripping", "--enable-symlinks")
+  c.sh("./configure","--enable-widec","--with-shared","--without-normal","--without-debug","--with-termlib", "--with-cxx-shared", "--with-cxx-binding", "--enable-pc-files", "--disable-stripping", "--enable-symlinks", "--with-versioned-syms")
 
 def install(c):
   c.sh("make", "install", f"DESTDIR={c.PKGDIR}", f"-j{c.NPROC}") # should be also symlinked to /lib64
