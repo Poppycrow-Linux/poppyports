@@ -104,7 +104,7 @@ cd "$BUILDDIR"
   --disable-threads \
   --disable-libatomic --disable-libgomp --disable-libquadmath \
   --disable-libssp --disable-libvtv --disable-libstdcxx \
-  --enable-languages=c
+  --enable-languages=c,c++
 
 make
 make install
