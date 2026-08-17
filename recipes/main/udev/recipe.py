@@ -81,4 +81,4 @@ def install(c):
         c.sh("install", "-vm755", f"{builddir}/{helper}", f"{c.PKGDIR}/usr/lib/udev/")
 
     c.sh("install", "-vm644", f"{c.SRCDIR}/network/99-default.link", f"{c.PKGDIR}/usr/lib/udev/network")
-    c.sh(f"ln -s -r {c.PKGDIR}/usr/bin/udevadm {c.PKGDIR}/usr/lib/udevd", cwd=c.PKGDIR) # this is a gnu coreutils specific RELATIVE flag that's needed to link things relatively and not break the symlink. i am too tired to figure out the logistics of doing it properly but it is possible without using gnu coreutils specific stuff
+    c.lnk(f"{c.PKGDIR}/usr/bin/udevadm", f"{c.PKGDIR}/usr/lib/udevd", relative = True)
