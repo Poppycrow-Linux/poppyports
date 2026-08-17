@@ -110,6 +110,9 @@ cd "$BUILDDIR"
 make
 make install
 
+cat $SOURCES/gcc/gcc/{limitx,glimits,limity}.h > $($TARGET-gcc -print-file-name=include)/limits.h
+
+
 # kernel headers
 cd "$SOURCES/linux"
 make mrproper
