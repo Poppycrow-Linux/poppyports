@@ -165,17 +165,17 @@ class BuildContext:  # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
   def cp(self, frm, to):
     self.sh("cp", "-r", "-v", frm, to)
 
-  def lnk(self, frm, to):
-    self.sh("ln", "-s", frm, to)
+  #def lnk(self, frm, to):
+  #  self.sh("ln", "-s", frm, to)
 
-  def symlink(self, frm, to, relative=False, force=False):
-    to = str(to)
-    frm = str(frm)
+  def lnk(self, source, dest, relative=False, force=False):
+    source = str(source)
+    dest = str(dest)
     if relative:
-        to = os.path.relpath(to, start=os.path.dirname(frm) or ".")
-    if force and (os.path.lexists(frm)):
-        self.sh(f'rm -f -- {quote(frm)}')
-    self.sh(f'ln -s -- {quote(to)} {quote(frm)}')
+        source = os.path.relpath(source, start=os.path.dirname(dest) or ".")
+    if force and (os.path.lexists(dest)):
+        self.sh(f'rm -f -- {quote(dest)}')
+    self.sh(f'ln -s -- {quote(source)} {quote(dest)}')
 
   def apply_patches(self):
     patchdir = self.PORTDIR + "/patches"
