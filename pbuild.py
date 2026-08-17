@@ -117,6 +117,8 @@ def log(clr, *args):
   if (supressnonerrorlogs and (clr in {Colors.SUCCESS, Colors.ERROR, Colors.WARNING})) or not (supressnonerrorlogs):
     print(f"{clr if (clr is not None and color) else ''}I:", *args, Colors.END)
 
+def quote(x):
+    return shlex.quote(str(x))
 
 class BuildContext:  # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
   ARCH = "x86_64"  # RUDE: fuck arm developer
@@ -166,7 +168,7 @@ class BuildContext:  # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
   def lnk(self, frm, to):
     self.sh("ln", "-s", frm, to)
 
-  def symlink(c, frm, to, relative=False, force=False):
+  def symlink(self, frm, to, relative=False, force=False):
     to = str(to)
     frm = str(frm)
     if relative:
