@@ -74,6 +74,9 @@ def main():
         return
 
     recipe_names = {os.path.basename(p) for p in recipe_dirs}
+    recipe_names.add("libc") # libc is already packaged
+
+    totalmissing = set([])
 
     for recipe_dir in recipe_dirs:
         recipe_file = os.path.join(recipe_dir, "recipe.py")
@@ -91,6 +94,7 @@ def main():
         )
 
         missing = [dep for dep in deps if dep.split("/")[-1] not in recipe_names]
+        for i in missing: totalmissing.add(i)
 
         if missing:
             log(Colors.UNPACKAGED, f"{pkgname} depends on {', '.join(missing)}, which needs to be packaged!")
@@ -99,7 +103,8 @@ def main():
                 log(Colors.SUCCESS, f"{pkgname} is fully packaged, unless you forgot to mention all of its dependencies.")
             else:
                 log(Colors.SH_COMMAND, f"{pkgname} has no declared dependencies. Are you sure you are not forgetting something?")
-
+    print("IN TOTAL:")
+    print(*totalmissing)
 
 if __name__ == "__main__":
     main()
