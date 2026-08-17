@@ -174,8 +174,8 @@ class BuildContext:  # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
     if relative:
         to = os.path.relpath(to, start=os.path.dirname(frm) or ".")
     if force and (os.path.lexists(frm)):
-        c.sh(f'rm -f -- {quote(frm)}')
-    c.sh(f'ln -s -- {quote(to)} {quote(frm)}')
+        self.sh(f'rm -f -- {quote(frm)}')
+    self.sh(f'ln -s -- {quote(to)} {quote(frm)}')
 
   def apply_patches(self):
     patchdir = self.PORTDIR + "/patches"
