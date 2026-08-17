@@ -7,6 +7,7 @@ import argparse
 import configparser
 import hashlib
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -164,6 +165,15 @@ class BuildContext:  # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
 
   def lnk(self, frm, to):
     self.sh("ln", "-s", frm, to)
+
+  def symlink(c, frm, to, relative=False, force=False):
+    to = str(to)
+    frm = str(frm)
+    if relative:
+        to = os.path.relpath(to, start=os.path.dirname(frm) or ".")
+    if force and (os.path.lexists(frm)):
+        c.sh(f'rm -f -- {quote(frm)}')
+    c.sh(f'ln -s -- {quote(to)} {quote(frm)}')
 
   def apply_patches(self):
     patchdir = self.PORTDIR + "/patches"
