@@ -158,8 +158,8 @@ cd "$BUILDDIR"
 make
 make DESTDIR="$SYSROOT" install
 
-rm -v $SYSROOT/usr/lib/lib{stdc++{,exp,fs},supc++}.la
-
+rm -fv $SYSROOT/usr/lib/lib{stdc++{,exp,fs},supc++}.la || true
+rm -fv $SYSROOT/usr/lib64/lib{stdc++{,exp,fs},supc++}.la || true
 
 
 # --------- STAGE 2 BUILDING
@@ -184,6 +184,8 @@ sed '6031s/$add_dir//' -i $SOURCES/binutils/ltmain.sh
 
 make
 make DESTDIR="$SYSROOT" install
+
+rm -fv $SYSROOT/usr/lib/lib{bfd,ctf,ctf-nobfd,opcodes,sframe}.{a,la} || true
 
 
 # gcc
@@ -212,8 +214,9 @@ make DESTDIR="$SYSROOT" install
 
 
 # NOTE: if it doesn't compile remove './build/ccstrap/build' and try again. you might also want try removing the unpacked src dirs
+# NOTE: when shipping, remove sysroot/tools/ it is supposed to be temporary per LFS
+
 # TODO: finish this script. we need to build gcc stage 2 and binutils stage 2 and such
 #       read the lfs book chapter 5
-
 # TODO: turn this into a package recipe. It's probably going to be painful rewriting that in pure python 
 #       so we could just make it call a bash script. i dont see a big problem with that
