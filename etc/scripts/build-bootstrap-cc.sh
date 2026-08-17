@@ -68,7 +68,8 @@ extract "$SOURCES/glibc.tar.xz" "$SOURCES/glibc"
 extract "$SOURCES/linux.tar.xz" "$SOURCES/linux"
 
 
-# binutils: part 1
+# --------- STAGE 1 BUILDING
+# binutils
 BUILDDIR="$BUILD/binutils"
 rm -rf "$BUILDDIR"
 mkdir -p "$BUILDDIR"
@@ -83,7 +84,7 @@ make
 make install
 
 
-# gcc: part 1
+# gcc
 cd "$SOURCES/gcc"
 ./contrib/download_prerequisites --no-verify
 
@@ -138,29 +139,6 @@ sed '/RTLDLIST=/s@/usr@@g' -i $SYSROOT/usr/bin/ldd
 
 # TODO: tests from https://www.linuxfromscratch.org/lfs/view/systemd/chapter05/glibc.html
 
-# gcc: part 2
-BUILDDIR="$BUILD/gcc2"
-rm -rf "$BUILDDIR"
-mkdir -p "$BUILDDIR"
-cd "$BUILDDIR"
-
-"$SOURCES/gcc/configure" \
-  --build="$GUESS" --target="$TARGET" --prefix=/usr --with-sysroot="$SYSROOT" \
-  --with-glibc-version=$GLIBC_VERSION \
-  --enable-default-pie --enable-default-ssp \
-  --disable-fixincludes \
-  --disable-nls \
-  --disable-multilib \
-  --disable-threads \
-  --disable-libatomic --disable-libgomp --disable-libquadmath \
-  --disable-libssp --disable-libvtv --disable-libsanitizer \
-  --enable-languages=c,c++ \
-  CXX_FOR_TARGET="$TARGET-gcc -nostdinc++"
-
-
-make
-make DESTDIR="$SYSROOT" install
-
 
 # libstdc++ from gcc
 # https://www.linuxfromscratch.org/lfs/view/systemd/chapter05/gcc-libstdc++.html
@@ -183,5 +161,59 @@ make DESTDIR="$SYSROOT" install
 rm -v $SYSROOT/usr/lib/lib{stdc++{,exp,fs},supc++}.la
 
 
+
+# --------- STAGE 2 BUILDING
+# we can (hopefully) skip the arch independent crap here, such as M4 ncurses file make... because they shouldn't cause big problems
+# binutils
+BUILDDIR="$BUILD/binutils2"
+rm -rf "$BUILDDIR"
+mkdir -p "$BUILDDIR"
+cd "$BUILDDIR"
+
+sed '6031s/$add_dir//' -i $SOURCES/binutils/ltmain.sh
+
+"$SOURCES/binutils/configure" \
+  --prefix=/usr --build="$GUESS" --host="$TARGET" \
+  --disable-nls \
+  --enable-shared \
+  --enable-gprofng=no \
+  --disable-werror \
+  --enable-64-bit-bfd \
+  --enable-new-dtags \
+  --enable-default-hash-style=gnu
+
+make
+make DESTDIR="$SYSROOT" install
+
+
+# gcc
+BUILDDIR="$BUILD/gcc2"
+rm -rf "$BUILDDIR"
+mkdir -p "$BUILDDIR"
+cd "$BUILDDIR"
+
+"$SOURCES/gcc/configure" \
+  --build="$GUESS" --host="$TARGET" --target="$TARGET" --prefix=/usr \
+  --with-build-sysroot="$SYSROOT" \
+  --enable-default-pie --enable-default-ssp \
+  --disable-fixincludes \
+  --disable-nls \
+  --disable-multilib \
+  --disable-libatomic --disable-libgomp --disable-libquadmath \
+  --disable-libssp --disable-libvtv --disable-libsanitizer \
+  --enable-languages=c,c++ \
+  CXX_FOR_TARGET="$TARGET-gcc -nostdinc++" \
+  target_configargs=gcc_cv_target_thread_file=posix
+
+
+make
+make DESTDIR="$SYSROOT" install
+
+
+
+# NOTE: if it doesn't compile remove './build/ccstrap/build' and try again. you might also want try removing the unpacked src dirs
 # TODO: finish this script. we need to build gcc stage 2 and binutils stage 2 and such
 #       read the lfs book chapter 5
+
+# TODO: turn this into a package recipe. It's probably going to be painful rewriting that in pure python 
+#       so we could just make it call a bash script. i dont see a big problem with that
