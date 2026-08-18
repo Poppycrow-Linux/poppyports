@@ -4,70 +4,18 @@ import argparse
 import configparser
 import hashlib
 import os
+import sys
 import shlex
 import shutil
 import subprocess
-import sys
 import tarfile
-import threading
-import time
 import urllib.request
-from enum import Enum
 
-# somebody move ALL of this into a class please
-start_time = time.time()
-total_time = 0  # ms
-last_time = 0
-time_spent_on_state = 0  # ms
-time_spent = {}  # state to ms
-stop_event = threading.Event()
+from .logutil import State, StateBenchmark, human_fsize
+
+
 supressnonerrorlogs = False  # set as a global variable so the log function would Know
 color = True  # same as above
-
-class State(Enum):
-  IDLE = 0
-  READ = 1
-  DOWNLOAD = 2
-  VERIFY = 3
-  EXTRACT = 4
-  BUILD = 5
-  DONE = 6
-
-
-status = State.IDLE
-
-
-def human_fsize(path):
-  size = os.path.getsize(path)
-  for unit in ["B", "KB", "MB", "GB"]:
-    if size < 1024 or unit == "GB":
-      return f"{size:.1f} {unit}" if unit != "B" else f"{size} B"
-    size /= 1024
-
-
-def change_status(target: State):
-  global time_spent
-  global last_time
-  global status
-  time_spent[status] = time_spent_on_state
-  last_time = total_time
-
-  status = target
-
-
-def passive_timer():
-  global time_spent_on_state
-  global total_time
-  while not stop_event.is_set():
-    total_time = 1000 * (time.time() - start_time)
-    time_spent_on_state = total_time - last_time
-    time.sleep(0.1)
-
-
-timer_thread = threading.Thread(target=passive_timer, daemon=True)
-timer_thread.start()
-# end of "all of this" as said above
-
 
 # exceptions
 class InvalidRecipeError(Exception):
@@ -78,6 +26,8 @@ class InvalidChecksumError(Exception):
   pass
 
 
+# sam: I don't know what you just said but there HAS to be a better way to do this valera. #gotowork
+#  
 # this one needs a bit of backstory
 # argparse's store true or store false, quite obviously, returns false if not present or true if present
 # however, this creates a problem where we cannot know when to fallback to the config, since false means that the option is just not present
@@ -215,7 +165,6 @@ def download_files(ctx, recipe, redownload):
 
     elif url.startswith("git://"):
       # new TODO: remove this entirely. we should probably never clone directly from git this is a pretty bad idea in general for patches versioning and everything
-      # TODO: add cloning from https git
       skip_extracting = True
       dest = f"{ctx.SRCDIR}/{recipe['pkgname']}"
       if not os.path.exists(dest) or redownload:
@@ -225,31 +174,6 @@ def download_files(ctx, recipe, redownload):
         log(None, f"{dest} already exists, skipping download!")
 
   return skip_extracting
-
-
-def build_state_breakdown():
-  def truncate(num, places):
-    if places == 0:
-      return str(int(num))
-    s = str(num)
-    if "e" in s or "E" in s:
-      s = f"{num:.15f}"
-    before_dec, after_dec = s.split(".")
-    return f"{before_dec}.{after_dec[:places]}"
-
-  global time_spent
-  result = ""
-  for s, t in time_spent.items():
-    measurement = "ms"
-    divisor = 1
-    if t > 60000:
-      measurement = "min"
-      divisor = 60000
-    elif t > 1000:  # seconds
-      measurement = "s"
-      divisor = 1000
-    result += f"{s.name}: {truncate(t / divisor, 5)} ({measurement})\n"
-  return result
 
 
 def calc_checksum(path, algorithm="sha256"):
@@ -428,8 +352,10 @@ def main():
   # pkgpath = sys.argv[1]
   # builddir = sys.argv[2]
 
-  change_status(State.READ)
-  log(None, "READING RECIPE")
+
+  # SCRIPT BEGINNING, MOVE THIS SOMEWHERE!!!
+  bench = StateBenchmark()
+
   log(None, f"Arguments used: {args}")
 
   if appendportsdirtopath:
@@ -440,11 +366,11 @@ def main():
   recipe = read_recipe(f"{pkgpath_real}/recipe.py")
 
   ctx = BuildContext(os.path.abspath(builddir), os.path.abspath(pkgpath_real), recipe)
+  log(None, f"NPROC: {ctx.NPROC}")
+
 
   # ok so normally I would make this a config option but removing the pkgdir is neccesary to avoid
   # accidentally including the leftover files from unsuccessful builds.
-
-
   os.makedirs(ctx.BUILDDIR, exist_ok=True)
 
   outpath = f"{builddir}/{recipe['pkgname']}-{recipe['pkgver']}.apk"
@@ -453,14 +379,16 @@ def main():
     sys.exit(0)
 
   if redownload and os.path.exists(ctx.SRCDIR):
-      log(Colors.SH_COMMAND, f"Removing {ctx.SRCDIR} as redownload flag has been passed!")
-      shutil.rmtree(ctx.SRCDIR)
-  change_status(State.DOWNLOAD)
+    log(Colors.SH_COMMAND, f"Removing {ctx.SRCDIR} as redownload flag has been passed!")
+    shutil.rmtree(ctx.SRCDIR)
+
+  
+  bench.change(State.DOWNLOAD)
   log(None, "Downloading files")
   skip_extracting = download_files(ctx, recipe, redownload)
 
   if "sha256sum" in recipe:
-    change_status(State.VERIFY)
+    bench.change(State.CHECKSUM)
     log(None, "Checksum found in recipe, checking...")
 
     if check_downloaded(ctx, recipe) == True:
@@ -473,20 +401,25 @@ def main():
   else:
     log(Colors.WARNING, f"//// SHA256 checksum not found in recipe {recipe['pkgname']}, extracting without checks. ////")
 
+  bench.change(State.EXTRACT)
   if not skip_extracting:
-    change_status(State.EXTRACT)
     if os.path.exists(ctx.PKGDIR):
-        shutil.rmtree(ctx.PKGDIR)
-        log(Colors.SH_COMMAND, f"Removing {ctx.PKGDIR}")
+      shutil.rmtree(ctx.PKGDIR)
+      log(Colors.SH_COMMAND, f"Removing {ctx.PKGDIR}")
+    
     log(None, "Extracting source...")
     extract_src(ctx, recipe)
 
-  change_status(State.BUILD)
   log(None, "Building...")
+  bench.change(State.BUILD)
   ctx.build()
+  bench.change(State.INSTALL)
   ctx.install()
 
+
   # make apk
+  # TODO: at the top of main(), run a preflight() to check if apk and various other important things are available.
+  # TODO: move all apk related operations to its own module.
   def run_apk(args):
     # env = os.environ.copy()
     # env["LD_LIBRARY_PATH"] = "staging/apk-install/lib/x86_64-linux-gnu/"
@@ -514,11 +447,11 @@ def main():
   apkcmd.extend(["-F", ctx.PKGDIR, "-o", outpath])
 
   run_apk(apkcmd)
-  change_status(State.DONE)
+
+  bench.change(State.DONE)
   log(Colors.SUCCESS,f"Done! Generated {outpath} ({human_fsize(outpath)})")
-  stop_event.set()
   if show_bs_breakdown:
     print()
-    log(Colors.SUCCESS, f"Build State Breakdown: (With {ctx.NPROC} passed to NPROC)")
+    log(Colors.SUCCESS, f"Build Breakdown")
     print()
-    print(build_state_breakdown())
+    print(bench.build_breakdown())
