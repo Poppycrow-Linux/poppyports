@@ -1,0 +1,8 @@
+[project]
+name = "pbuild"
+description = "ports and build system"
+version = "0.0.1"
+
+[tool.ruff]
+line-length = 100
+indent-width = 2

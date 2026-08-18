@@ -1,0 +1,10 @@
+#!/usr/bin/env python3
+import os, sys
+
+# set pycache to root dir
+if sys.pycache_prefix is None:
+  root = os.path.dirname(os.path.realpath(__file__))
+  sys.pycache_prefix = f"{root}/__pycache__"
+
+from src.pbuild import main
+main()
