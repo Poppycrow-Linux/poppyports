@@ -1,6 +1,6 @@
 recipever = 0
 pkgname = "linux-headers"
-pkgver = "7.1.8"
+pkgver = "7.1.9"
 pkgrel = 0
 pkgdesc = "Headers for the Linux kernel"
 url = "https://www.kernel.org/"
