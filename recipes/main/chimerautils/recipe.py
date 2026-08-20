@@ -24,7 +24,7 @@ def install(c):
     bindir = f"{c.PKGDIR}/bin"
     os.makedirs(bindir, exist_ok=True)
 
-    for srcdir in ("src.freebsd", "src.custom"):
+    for srcdir in ("src.freebsd", "src.custom", "src.freebsd/miscutils", "src.freebsd/coreutils"):
         root = f"{c.SRCDIR}/build/{srcdir}"
 
         if not os.path.isdir(root):
