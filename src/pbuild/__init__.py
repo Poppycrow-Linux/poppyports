@@ -118,11 +118,13 @@ class BuildContext:  # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
   def lnk(self, source, dest, relative=False, force=False):
     source = str(source)
     dest = str(dest)
+    cwd = None
     if relative:
-        source = os.path.relpath(source, start=os.path.dirname(dest) or ".")
-    if force and (os.path.lexists(dest)):
-        self.sh(f'rm -f -- {quote(dest)}')
-    self.sh(f'ln -s -- {quote(source)} {quote(dest)}')
+        cwd = os.path.abspath(os.path.dirname(dest) or ".")
+        source = os.path.relpath(os.path.abspath(source), start=cwd)
+    if force and os.path.lexists(dest):
+        self.sh(f'rm -f -- {quote(dest)}', cwd=cwd)
+    self.sh(f'ln -s -- {quote(source)} {quote(dest)}', cwd=cwd)
 
   def apply_patches(self):
     patchdir = self.PORTDIR + "/patches"
