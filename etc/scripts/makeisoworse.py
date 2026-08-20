@@ -70,7 +70,7 @@ subprocess.run(("rsync","-r","-v","recipes/main/poppy-base/overlay/.","build/roo
 
 for dep in depends:
   print(f"building {dep}")
-  subprocess.run(["python3", "pbuild.py", f"{dep}", f"build/pkg/{dep}"])
+  subprocess.run(["python3", "pbuild", f"{dep}", f"build/pkg/{dep}"])
   print(f"Copying the contents of build/pkg/{dep}/pkgdir/ to build/rootfs/")
   subprocess.run(["rsync", "-r", "-l", "-K", "-H", f"build/pkg/{dep}/pkgdir/.", "build/rootfs/"])
 
