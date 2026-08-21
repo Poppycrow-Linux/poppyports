@@ -1,3 +1,5 @@
+## TODO: make this a subpackage of gcc to not build the gcc twice!!!
+
 recipever = 0
 pkgname = "libgcc"
 pkgver = "16.1.0"
