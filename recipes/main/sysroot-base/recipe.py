@@ -22,7 +22,7 @@ depends = [
     "main/ncurses",
     "main/zlib",
     "main/xz",
-    "main/python",
+    "lang/python3",
     "main/openssl",
     "main/libcap",
     "main/acl",
