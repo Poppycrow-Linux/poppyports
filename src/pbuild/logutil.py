@@ -29,22 +29,25 @@ class State(Enum):
   INSTALL  = "Install"
   DONE     = "Done"
 
+def ctime():
+  return time.time() * 1000
+
 class StateBenchmark:
   def __init__(self):
-    now = time.time()
+    now = ctime()
     self.started_at = now
     self.state_started_at = now
     self.state = State.IDLE
     self.elapsed = {}  # map[state, ms]
 
   def total(self):
-    return time.time() - self.started_at
+    return ctime() - self.started_at
 
   def current(self):
-    return time.time() - self.state_started_at
+    return ctime() - self.state_started_at
 
   def change(self, state: str):
-    now = time.time()
+    now = ctime()
     self.elapsed[self.state] = now - self.state_started_at
     self.state = state
     self.state_started_at = now
