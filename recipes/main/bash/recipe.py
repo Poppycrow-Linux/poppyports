@@ -21,3 +21,5 @@ def build(c):
 
 def install(c):
   c.sh("make", "install", f"DESTDIR={c.PKGDIR}")
+  c.sh(f"ln -s -r {c.PKGDIR}/usr/bin/bash {c.PKGDIR}/usr/bin/sh") #TODO replace this with a non gnu-coreutils command (othe rimpls. of ln do not have -r)
+  #c.sh("install",f"{c.PKGDIR}/usr/bin/bash", f"{c.PKGDIR}/usr/bin/sh")
