@@ -1,0 +1,3 @@
+#!/bin/sh
+echo "Hello from rc.local, the non-documented chimera-dinit file"
+echo "I have no clue what it does, but hopefully it will allow the boot to continue"
