@@ -14,7 +14,6 @@ depends = [
     "main/ncurses",
     "main/libedit",
     "main/linux-pam",
-    "main/glibc",
     "main/bzip2",
     "main/pcre2",
     "main/gdbm",
@@ -26,6 +25,7 @@ depends = [
     "main/openssl",
     "main/libcap",
     "main/acl",
+    "main/glibc",
     "main/libdinitctl",
 ]
 
