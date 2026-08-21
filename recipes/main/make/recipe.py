@@ -11,6 +11,7 @@ maintainer = "samxyz30"
 sources = [f"https://ftp.gnu.org/gnu/make/make-{pkgver}.tar.gz"]
 sha256sum = ["dd16fb1d67bfab79a72f5e8390735c49e3e8e70b4945a15ab1f81ddb78658fb3"]
 depends = ["libc"]
+makedepends = ["make"]
 
 
 def build(c):
