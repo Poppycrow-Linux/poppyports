@@ -77,6 +77,27 @@ While running things in the nographic mode is far from necessary, this allows us
 For even more information on how the system is built, you can inspect the makeisoworse script itself, livecd-base and base-poppy recipes.
 Do note, that as of now, you need to enable agetty and udevd manually before exiting to dinit and continuing to boot, otherwise you might get seemingly stuck on local.target. 
 
+## How to build my packages and link them against the packages provided by the other recipes?
+First you run `/etc/scripts/makesysroot.py` to make a sysroot. If you need more packages in it, just add them to /recipes/main/sysroot-base
+Then, inside the build directory, you could place a script like this:
+`run_sysroot.py`
+```sh
+#!/bin/sh
+bwrap \
+  --die-with-parent \
+  --unshare-all \
+  --share-net \
+  --bind "./sysroot" / \
+  --bind "../" /poppyports \
+  --bind "." /poppyports/build \
+  --proc /proc \
+  --dev /dev \
+  --tmpfs /tmp \
+  --chdir /poppyports \
+  /bin/sh
+```
+In this configuration, the sysroot literally mirrors the root partition that would normally be there, and also makes the poppyports folder shared. This way, you can invoke pbuild from inside the sysroot to build new packages linked against what Poppycrow offers.
+In the future, this entire process should be automated.
 
 ## Subtitles?
 subtitles by DimaTorzok
