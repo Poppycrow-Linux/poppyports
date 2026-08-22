@@ -1,7 +1,7 @@
 # NOTE: whatever glibc we're building is shipping a ton of shit, i guess were building for debug? idk
 recipever = 0
 pkgname = "glibc"
-pkgver = "2.42"
+pkgver = "2.44"
 pkgrel = 0
 pkgdesc = "GNU libc"
 url = "https://gnu.org/"
@@ -20,7 +20,7 @@ def build(c):
   c.env["CXX"] = "g++"
 
   # apply patches
-  c.sh("patch", "-p1", "-i", c.PORTDIR + "/001-fix-sysmount.patch")
+  # c.sh("patch", "-p1", "-i", c.PORTDIR + "/001-fix-sysmount.patch")
 
   # because you cannot do in tree builds gnu fuck you
   c.sh("mkdir", "-p", c.SRCDIR + "/build")

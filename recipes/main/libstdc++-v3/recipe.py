@@ -1,6 +1,6 @@
 recipever = 0
 pkgname = "libstdc++-v3"
-pkgver = "16.1.0"
+pkgver = "16.2.0"
 pkgrel = 0
 pkgdesc = "libstdc++ V3, part of GCC sources"
 url = "https://gcc.gnu.org/"
