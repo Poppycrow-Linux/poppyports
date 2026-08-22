@@ -2,7 +2,7 @@
 
 recipever = 0
 pkgname = "libgcc"
-pkgver = "16.1.0"
+pkgver = "16.2.0"
 pkgrel = 0
 pkgdesc = "LIB gcc"
 url = "https://gcc.gnu.org/"
