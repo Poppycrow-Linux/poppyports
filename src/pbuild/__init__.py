@@ -27,7 +27,7 @@ class InvalidChecksumError(Exception):
 
 
 # sam: I don't know what you just said but there HAS to be a better way to do this valera. #gotowork
-#  
+#
 # this one needs a bit of backstory
 # argparse's store true or store false, quite obviously, returns false if not present or true if present
 # however, this creates a problem where we cannot know when to fallback to the config, since false means that the option is just not present
@@ -112,9 +112,6 @@ class BuildContext:  # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
   def cp(self, frm, to):
     self.sh("cp", "-r", "-v", frm, to)
 
-  #def lnk(self, frm, to):
-  #  self.sh("ln", "-s", frm, to)
-
   def lnk(self, source, dest, relative=False, force=False):
     source = str(source)
     dest = str(dest)
@@ -126,12 +123,20 @@ class BuildContext:  # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
         self.sh(f'rm -f -- {quote(dest)}', cwd=cwd)
     self.sh(f'ln -s -- {quote(source)} {quote(dest)}', cwd=cwd)
 
+  def install_file(self, source, destination, mode = None):
+    args = ["install", "-D", "-v"]
+    if mode is not None: args += ["-m", str(mode)]
+    self.sh(*args, source, destination)
+
+  def install_dir(self, directory, mode = "755"):
+    self.sh("install", "-d", "-v", "-m", mode, directory)
+
   def apply_patches(self):
     patchdir = self.PORTDIR + "/patches"
     if not os.path.exists(patchdir): return  # no patches to apply
     for path, dirs, files in os.walk(patchdir):
-      for patch in files:
-        self.sh("patch", "-p1", "-i", f"{path}/{patch}")
+        for patch in files:
+            self.sh("patch", "-p1", "-i", f"{path}/{patch}")
 
   def build(self):
     self.recipe["build"](self)
@@ -384,7 +389,7 @@ def main():
     log(Colors.SH_COMMAND, f"Removing {ctx.SRCDIR} as redownload flag has been passed!")
     shutil.rmtree(ctx.SRCDIR)
 
-  
+
   bench.change(State.DOWNLOAD)
   log(None, "Downloading files")
   skip_extracting = download_files(ctx, recipe, redownload)
@@ -408,7 +413,7 @@ def main():
     if os.path.exists(ctx.PKGDIR):
       shutil.rmtree(ctx.PKGDIR)
       log(Colors.SH_COMMAND, f"Removing {ctx.PKGDIR}")
-    
+
     log(None, "Extracting source...")
     extract_src(ctx, recipe)
 
