@@ -138,6 +138,10 @@ class BuildContext:  # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
         for patch in files:
             self.sh("patch", "-p1", "-i", f"{path}/{patch}")
 
+
+  def chmod(self, mode, *paths):
+    self.sh(f"chmod", mode, *paths)
+
   def build(self):
     self.recipe["build"](self)
 
