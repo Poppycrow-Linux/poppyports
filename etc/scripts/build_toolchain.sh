@@ -89,7 +89,7 @@ derive_target() {
       ;;
   esac
 
-  case "$arch" in
+  case "$arch" in # I ONLY TESTED ARM64. i added more just for Fun. if you get poppycrow running on ppc and something broke then I am Sorry. TODO: make this cleaner
     x86_64)
       echo "x86_64-${vendor}-linux-${libc_suffix}"
       ;;
@@ -121,7 +121,7 @@ derive_target() {
   esac
 }
 
-derive_kernel_arch() {
+derive_kernel_arch() { # this is needed because the linux kernbel are a bunch of idiots who use different names than the triplet
   case "$1" in
     x86_64|i686)
       echo "x86"
@@ -151,11 +151,14 @@ default_slibdir() {
   local arch="$1"
 
   case "$arch" in
-    x86_64)
+    x86_64|ppc64le|s390x)
       echo "/lib64"
       ;;
-    *)
+    aarch64|armv7|i686|riscv64)
       echo "/lib"
+      ;;
+    *)
+      die "cannot derive libc shared-library directory from: $arch"
       ;;
   esac
 }
@@ -177,7 +180,11 @@ EOF
   "$compiler" -print-sysroot
 
   info "building sysroot test binary"
-  "$compiler" --sysroot="$SYSROOT" "$test_source" -o "$test_binary"
+  "$compiler" \
+  "${TARGET_CFLAGS[@]}" \
+  --sysroot="$SYSROOT" \
+  "$test_source" \
+  -o "$test_binary"
 
   if command -v file >/dev/null 2>&1; then
     file "$test_binary"
@@ -214,6 +221,83 @@ HEADERS_VERSION="${HEADERS_VERSION:-7.1.8}"
 
 MIN_KERNEL="${MIN_KERNEL:-5.10}"
 LIBC_SLIBDIR="${LIBC_SLIBDIR:-$(default_slibdir "$ARCH")}"
+
+GCC_TARGET_CONFIGURE_ARGS=()
+TARGET_CFLAGS=(-O2) # this is set explicitly because otherwise gcc will throw a hissy fit about not having compiler optimizations on.
+
+case "$LIBC" in
+  glibc)
+    ;;
+  musl)
+    die "LIBC=musl is not implemented; this script currently builds glibc only"
+    ;;
+  *)
+    die "unsupported libc: $LIBC"
+    ;;
+esac
+
+case "$ARCH" in # once again i only properly tested aarch64 but the others are also supposed to work
+# things are taken from:
+# https://gcc.gnu.org/onlinedocs/gcc/ARM-Options.html
+# https://www.linuxfromscratch.org/~xry111/lfs/view/arm64/chapter05/gcc-pass1.html (arm64 lfs)
+# https://aur.archlinux.org/packages/arm-linux-gnueabihf-glibc?O=10 - glibc for armv7
+  x86_64)
+    # it already assumes x86_64 #lol
+    ;;
+
+  aarch64)
+    GCC_TARGET_CONFIGURE_ARGS+=(
+      --with-arch=armv8-a
+      --with-abi=lp64
+    )
+    TARGET_CFLAGS+=(
+      -march=armv8-a
+      -mabi=lp64
+    )
+    ;;
+
+  armv7)
+    # The gnueabihf target requires the hard-float ABI.
+    GCC_TARGET_CONFIGURE_ARGS+=(
+      --with-arch=armv7-a
+      --with-fpu=vfpv3-d16
+      --with-float=hard
+    )
+    TARGET_CFLAGS+=(
+      -march=armv7-a
+      -mfpu=vfpv3-d16
+      -mfloat-abi=hard
+    )
+    ;;
+
+  i686)
+    GCC_TARGET_CONFIGURE_ARGS+=(
+      --with-arch=i686
+    )
+    TARGET_CFLAGS+=(
+      -march=i686
+    )
+    ;;
+
+  riscv64)
+    GCC_TARGET_CONFIGURE_ARGS+=(
+      --with-arch=rv64gc
+      --with-abi=lp64d
+    )
+    TARGET_CFLAGS+=(
+      -march=rv64gc
+      -mabi=lp64d
+    )
+    ;;
+
+  ppc64le|s390x)
+    # The target triples select the required 64-bit ABI and endianness.
+    ;;
+
+  *)
+    die "unsupported architecture: $ARCH"
+    ;;
+esac
 
 BINUTILS_SHA256="${BINUTILS_SHA256:-}"
 GCC_SHA256="${GCC_SHA256:-}"
@@ -311,15 +395,31 @@ build_directory "gcc-stage1"
   --with-newlib \
   --disable-libstdcxx \
   --enable-languages=c \
-  --disable-multilib
+  --disable-multilib \
+  "${GCC_TARGET_CONFIGURE_ARGS[@]}"
+  # todo: enable multilib and make it work!
 
 make all-gcc all-target-libgcc
 make install-gcc install-target-libgcc
 
 info "installing Linux userspace headers"
-cd "$HEADERS_SOURCE"
-make mrproper
-make ARCH="$KERNEL_ARCH" headers_install INSTALL_HDR_PATH="$SYSROOT/usr"
+
+##debug slop
+info "shell ARCH: ${ARCH:-unset}"
+info "kernel ARCH: $KERNEL_ARCH"
+
+[[ -f "$HEADERS_SOURCE/arch/$KERNEL_ARCH/Makefile" ]] || die \
+  "missing kernel architecture Makefile: arch/$KERNEL_ARCH/Makefile"
+
+## linux kernel is an IDIOT and looks at arch variable first.
+make -C "$HEADERS_SOURCE" \
+  ARCH="$KERNEL_ARCH" \
+  mrproper
+
+make -C "$HEADERS_SOURCE" \
+  ARCH="$KERNEL_ARCH" \
+  headers_install \
+  INSTALL_HDR_PATH="$SYSROOT/usr"
 
 info "building Glibc"
 build_directory "glibc"
@@ -330,6 +430,7 @@ export AR="$TARGET-ar"
 export RANLIB="$TARGET-ranlib"
 export NM="$TARGET-nm"
 
+CFLAGS="${CFLAGS:-} ${TARGET_CFLAGS[*]}" \
 "$GLIBC_SOURCE/configure" \
   --prefix=/usr \
   --build="$BUILD_TRIPLE" \
@@ -368,7 +469,8 @@ build_directory "gcc-final"
   --disable-nls \
   --disable-fixincludes \
   --disable-bootstrap \
-  --disable-multilib
+  --disable-multilib \
+  "${GCC_TARGET_CONFIGURE_ARGS[@]}"
 
 make
 make install
@@ -382,3 +484,5 @@ test_sysroot_compiler
 info "toolchain completed successfully"
 info "compiler: $TOOLCHAIN/bin/$TARGET-gcc"
 info "sysroot: $SYSROOT"
+
+#TODO: clean this script up, maybe rewrite it in pytho.
