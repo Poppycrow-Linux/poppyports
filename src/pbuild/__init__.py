@@ -64,8 +64,51 @@ def log(clr, *args):
   if (supressnonerrorlogs and (clr in {Colors.SUCCESS, Colors.ERROR, Colors.WARNING})) or not (supressnonerrorlogs):
     print(f"{clr if (clr is not None and color) else ''}I:", *args, Colors.END)
 
+
 def quote(x):
-    return shlex.quote(str(x))
+  return shlex.quote(str(x))
+
+
+def target_triple(arch, libc="glibc", vendor="crow"):
+  if libc == "glibc":
+    libc_suffix = "gnu"
+  elif libc == "musl":
+    libc_suffix = "musl"
+  else:
+    raise ValueError(f"unsupported libc: {libc}")
+
+  if arch == "x86_64":
+    return f"x86_64-{vendor}-linux-{libc_suffix}"
+  if arch == "aarch64":
+    return f"aarch64-{vendor}-linux-{libc_suffix}"
+  if arch == "armv7":
+    suffix = "gnueabihf" if libc == "glibc" else "musleabihf"
+    return f"arm-{vendor}-linux-{suffix}"
+  if arch == "i686":
+    return f"i686-{vendor}-linux-{libc_suffix}"
+  if arch == "riscv64":
+    return f"riscv64-{vendor}-linux-{libc_suffix}"
+  if arch == "ppc64le":
+    return f"powerpc64le-{vendor}-linux-{libc_suffix}"
+  if arch == "s390x":
+    return f"s390x-{vendor}-linux-{libc_suffix}"
+
+  raise ValueError(f"unsupported target architecture: {arch}")
+
+
+def split_target(target):
+  try:
+    arch, libc = target.rsplit("-", 1)
+  except ValueError as error:
+    raise InvalidRecipeError(f"invalid target: {target}; expected ARCH-LIBC") from error
+
+  try:
+    target_triple(arch, libc)
+  except ValueError as error:
+    raise InvalidRecipeError(str(error)) from error
+
+  return arch, libc
+
 
 class BuildContext:  # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
   ARCH = "x86_64"  # RUDE: fuck arm developer
@@ -75,9 +118,16 @@ class BuildContext:  # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
   SRCDIR = None  # this is package source directory
   PKGDIR = None  # this is package staging directory i.e. where it will be installed
   NPROC = 1
+  SYSROOT = None
+  SYSROOT_PATH = None
+  SYSROOT_LOOKUP_DIR = None
+  TARGET_DIR = None
+  TOOLCHAIN = None
+  TRIPLE = None
+  TARGET = None
   LIBC = ""
 
-  def __init__(self, builddir, portdir, recipe):
+  def __init__(self, builddir, portdir, recipe, sysroot=None, sysroot_path=None, toolchain=None, target=None):
     self.BUILDDIR = builddir
     self.PORTDIR = portdir
     self.SRCDIR = os.path.join(builddir, "pkgsrc")
@@ -85,17 +135,54 @@ class BuildContext:  # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
     os.makedirs(self.SRCDIR, exist_ok=True)
     os.makedirs(self.PKGDIR, exist_ok=True)
 
-    self.NPROC = os.cpu_count() if os.cpu_count() is not None else 1
+    self.NPROC = os.cpu_count() or 1
     self.LIBC = "glibc"  # possible musl variant in the future TODO: package musl
     # i think this is wrong? ARCH would refer to our target architecture whereas recipe arch is the arch it can be built for
     # TODO: this should be replaced with if checks
     self.ARCH = recipe["arch"]
+    self.TARGET = target or f"{self.ARCH}-{self.LIBC}"
+    self.ARCH, self.LIBC = split_target(self.TARGET)
     self.recipe = recipe
     self.recipe["depends"] = [
       self.LIBC if pkg == "libc" else pkg for pkg in self.recipe["depends"]
     ]
 
-    self.env = os.environ.copy()
+    self.SYSROOT_LOOKUP_DIR = os.path.abspath(sysroot) if sysroot else None
+    self.SYSROOT_PATH = os.path.abspath(sysroot_path) if sysroot_path else None
+    self.TARGET_DIR = None
+    self.SYSROOT = None
+    self.TOOLCHAIN = os.path.abspath(toolchain) if toolchain else None
+    self.TRIPLE = None
+    self.CC = "cc"
+    self.CXX = "c++"
+    self.AR = "ar"
+    self.RANLIB = "ranlib"
+    self.STRIP = "strip"
+    self.NM = "nm"
+
+    if self.SYSROOT_PATH is None and self.SYSROOT_LOOKUP_DIR is not None:
+      self.TARGET_DIR = os.path.join(self.SYSROOT_LOOKUP_DIR, self.TARGET)
+      self.SYSROOT_PATH = os.path.join(self.TARGET_DIR, "sysroot")
+
+    if self.SYSROOT_PATH is not None:
+      self.SYSROOT = self.SYSROOT_PATH
+      self.TRIPLE = target_triple(self.ARCH, self.LIBC)
+
+      if self.TOOLCHAIN is None:
+        if self.TARGET_DIR is not None:
+          self.TOOLCHAIN = os.path.join(self.TARGET_DIR, "toolchain")
+        else:
+          self.TOOLCHAIN = os.path.join(os.path.dirname(self.SYSROOT), "toolchain")
+
+      toolbindir = os.path.join(self.TOOLCHAIN, "bin")
+      self.CC = os.path.join(toolbindir, f"{self.TRIPLE}-gcc")
+      self.CXX = os.path.join(toolbindir, f"{self.TRIPLE}-g++")
+      self.AR = os.path.join(toolbindir, f"{self.TRIPLE}-ar")
+      self.RANLIB = os.path.join(toolbindir, f"{self.TRIPLE}-ranlib")
+      self.STRIP = os.path.join(toolbindir, f"{self.TRIPLE}-strip")
+      self.NM = os.path.join(toolbindir, f"{self.TRIPLE}-nm")
+
+    self.env = self.make_build_environment()
     # self.env["DESTDIR"] = self.pkgdir
     # self.env["CFLAGS"] = self.CFLAGS
 
@@ -117,27 +204,26 @@ class BuildContext:  # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
     dest = str(dest)
     cwd = None
     if relative:
-        cwd = os.path.abspath(os.path.dirname(dest) or ".")
-        source = os.path.relpath(os.path.abspath(source), start=cwd)
+      cwd = os.path.abspath(os.path.dirname(dest) or ".")
+      source = os.path.relpath(os.path.abspath(source), start=cwd)
     if force and os.path.lexists(dest):
-        self.sh(f'rm -f -- {quote(dest)}', cwd=cwd)
+      self.sh(f'rm -f -- {quote(dest)}', cwd=cwd)
     self.sh(f'ln -s -- {quote(source)} {quote(dest)}', cwd=cwd)
 
-  def install_file(self, source, destination, mode = None):
+  def install_file(self, source, destination, mode=None):
     args = ["install", "-D", "-v"]
     if mode is not None: args += ["-m", str(mode)]
     self.sh(*args, source, destination)
 
-  def install_dir(self, directory, mode = "755"):
+  def install_dir(self, directory, mode="755"):
     self.sh("install", "-d", "-v", "-m", mode, directory)
 
   def apply_patches(self):
     patchdir = self.PORTDIR + "/patches"
     if not os.path.exists(patchdir): return  # no patches to apply
     for path, dirs, files in os.walk(patchdir):
-        for patch in files:
-            self.sh("patch", "-p1", "-i", f"{path}/{patch}")
-
+      for patch in files:
+        self.sh("patch", "-p1", "-i", f"{path}/{patch}")
 
   def chmod(self, mode, *paths):
     self.sh(f"chmod", mode, *paths)
@@ -145,8 +231,117 @@ class BuildContext:  # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
   def build(self):
     self.recipe["build"](self)
 
+  def write_cmake_toolchain(self):
+    if self.SYSROOT is None:
+      return None
+
+    path = os.path.join(self.BUILDDIR, "pbuild-toolchain.cmake")
+
+    with open(path, "w") as file:
+      file.write(f"""\
+set(CMAKE_SYSTEM_NAME Linux)
+set(CMAKE_SYSTEM_PROCESSOR {self.ARCH})
+
+set(CMAKE_C_COMPILER {self.CC})
+set(CMAKE_CXX_COMPILER {self.CXX})
+set(CMAKE_AR {self.AR})
+set(CMAKE_RANLIB {self.RANLIB})
+set(CMAKE_STRIP {self.STRIP})
+
+set(CMAKE_SYSROOT {self.SYSROOT})
+set(CMAKE_FIND_ROOT_PATH {self.SYSROOT})
+
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
+
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+""")
+
+    return path
+
   def install(self):
     self.recipe["install"](self)
+
+  def make_build_environment(self):
+    env = os.environ.copy()
+
+    if self.SYSROOT is None:
+      return env
+
+    if self.SYSROOT_LOOKUP_DIR is not None and not os.path.isdir(self.SYSROOT_LOOKUP_DIR):
+      raise InvalidRecipeError(f"sysroot lookup directory does not exist: {self.SYSROOT_LOOKUP_DIR}")
+
+    if self.TARGET_DIR is not None and not os.path.isdir(self.TARGET_DIR):
+      raise InvalidRecipeError(f"target directory does not exist: {self.TARGET_DIR}")
+
+    if not os.path.isdir(self.SYSROOT):
+      raise InvalidRecipeError(f"sysroot does not exist: {self.SYSROOT}")
+
+    if not os.path.isdir(self.TOOLCHAIN):
+      raise InvalidRecipeError(f"toolchain directory does not exist: {self.TOOLCHAIN}")
+
+    toolbindir = os.path.join(self.TOOLCHAIN, "bin")
+    if not os.path.isdir(toolbindir):
+      raise InvalidRecipeError(f"toolchain bin directory does not exist: {toolbindir}")
+
+    if not os.path.isfile(self.CC):
+      raise InvalidRecipeError(f"cross compiler does not exist: {self.CC}")
+
+    # These can cause host development files to leak into the build.
+    for key in (
+      "CPATH",
+      "C_INCLUDE_PATH",
+      "CPLUS_INCLUDE_PATH",
+      "OBJC_INCLUDE_PATH",
+      "LIBRARY_PATH",
+      "PKG_CONFIG_PATH",
+      "PKG_CONFIG_LIBDIR",
+      "PKG_CONFIG_SYSROOT_DIR",
+    ):
+      env.pop(key, None)
+
+    sysroot = self.SYSROOT
+
+    pkgconfig_dirs = [
+      os.path.join(sysroot, "usr", "lib", "pkgconfig"),
+      os.path.join(sysroot, "usr", "lib64", "pkgconfig"),
+      os.path.join(sysroot, "usr", "lib", self.TRIPLE, "pkgconfig"),
+      os.path.join(sysroot, "usr", "share", "pkgconfig"),
+      os.path.join(sysroot, "lib", "pkgconfig"),
+      os.path.join(sysroot, "lib64", "pkgconfig"),
+    ]
+
+    env.update({
+      "PATH": os.pathsep.join((toolbindir, env.get("PATH", ""))),
+      "CC": self.CC,
+      "CXX": self.CXX,
+      "AR": self.AR,
+      "RANLIB": self.RANLIB,
+      "STRIP": self.STRIP,
+      "NM": self.NM,
+
+      "CPPFLAGS": f"--sysroot={sysroot}",
+      "CFLAGS": f"--sysroot={sysroot} {self.CFLAGS}".strip(),
+      "CXXFLAGS": f"--sysroot={sysroot} {self.CXXFLAGS}".strip(),
+      "LDFLAGS": f"--sysroot={sysroot} {self.LDFLAGS}".strip(),
+
+      # fuck over pkgconfig so it cannot look for path on the host
+      "PKG_CONFIG_PATH": "",
+      "PKG_CONFIG_LIBDIR": os.pathsep.join(pkgconfig_dirs),
+      "PKG_CONFIG_SYSROOT_DIR": sysroot,
+
+      # some makefiles understand it
+      "CROSS_COMPILE": self.TRIPLE + "-",
+
+      # no more setting destdir manually
+      "DESTDIR": self.PKGDIR,
+
+      "CMAKE_TOOLCHAIN_FILE": self.write_cmake_toolchain(),
+    })
+
+    return env
 
 
 def read_recipe(path):
@@ -154,7 +349,7 @@ def read_recipe(path):
     recipe_def = {}
     exec(f.read(), recipe_def)
 
-    REQUIRED_KEYS = { "sources", "pkgname", "build", "install", "arch", "pkgver" }
+    REQUIRED_KEYS = {"sources", "pkgname", "build", "install", "arch", "pkgver"}
     missing_keys = REQUIRED_KEYS - recipe_def.keys()  # this is set subtraction
     if missing_keys:
       raise InvalidRecipeError(f"This recipe is missing the {', '.join(missing_keys)} key(s)!")
@@ -280,6 +475,10 @@ def main():
   )
   parser.add_argument("-config", help="The config to use.", nargs="?")
   parser.add_argument("-portsdir", help="Folder with ports in it.", nargs="?")
+  parser.add_argument("-target", help="Target in ARCH-LIBC form, for example aarch64-glibc.", nargs="?")
+  parser.add_argument("-sysroot", help="Directory containing per-target sysroot folders.", nargs="?")
+  parser.add_argument("-sysrootpath", "-sysroot-path", help="Specific target sysroot directory.", nargs="?")
+  parser.add_argument("-toolchain", help="Specific cross-toolchain directory.", nargs="?")
   parser.add_argument(
     "-appendportsdirtopath",
     "-apd",
@@ -304,6 +503,10 @@ def main():
   rebuild = False
   show_bs_breakdown = True
   supressnonerrorlogs = False
+  target = None
+  sysroot = None
+  sysroot_path = None
+  toolchain = None
 
   # TODO: move config reading to a separate function
 
@@ -318,6 +521,10 @@ def main():
       "AssumeIgnoreIntegrity": "no",
       "PortsPath": "./recipes",
       "AppendPortsPathToRecipePath": "yes",
+      "Target": "",
+      "Sysroot": "",
+      "SysrootPath": "",
+      "Toolchain": "",
     }
     cfgparser["Display"] = {
       "Color": "yes",
@@ -334,35 +541,53 @@ def main():
   ignoreintegrity = cfgparser.getboolean("Build", "AssumeIgnoreIntegrity")
   redownload = cfgparser.getboolean("Build", "AssumeRedownload")
   builddir = cfgparser["Build"]["DefaultBuildPath"]
+  target = cfgparser.get("Build", "Target", fallback="")
+  sysroot = cfgparser.get("Build", "Sysroot", fallback="")
+  sysroot_path = cfgparser.get("Build", "SysrootPath", fallback="")
+  toolchain = cfgparser.get("Build", "Toolchain", fallback="")
   color = cfgparser.getboolean("Display", "Color")
   supressnonerrorlogs = cfgparser.getboolean("Display", "SupressNonErrorLogs")
   rebuild = cfgparser.getboolean("Build", "AssumeRebuild")
   show_bs_breakdown = cfgparser.getboolean("Display", "BuildStateBreakdown")
 
-  if args.appendportsdirtopath:
+  if args.appendportsdirtopath is not None:
     appendportsdirtopath = args.appendportsdirtopath
-  if args.pkgpath != None:
-    pkgpath = (
-      args.pkgpath
-    )  # ifs added so that cmdline functions cannot override shit when they are not set
-  if args.ignoreintegrity != None:
+  if args.pkgpath is not None:
+    pkgpath = args.pkgpath  # ifs added so that cmdline functions cannot override shit when they are not set
+  if args.ignoreintegrity is not None:
     ignoreintegrity = args.ignoreintegrity
-  if args.builddir != None:
+  if args.builddir is not None:
     builddir = args.builddir
-  if args.color != None:
+  if args.target is not None:
+    target = args.target
+  if args.sysroot is not None:
+    sysroot = args.sysroot
+  if args.sysrootpath is not None:
+    sysroot_path = args.sysrootpath
+  if args.toolchain is not None:
+    toolchain = args.toolchain
+  if args.color is not None:
     color = args.color
-  if args.fresh != None:
+  if args.fresh is not None:
     redownload = args.fresh
-  if args.supressnonerrorlogs != None:
+  if args.supressnonerrorlogs is not None:
     supressnonerrorlogs = args.supressnonerrorlogs
-  if args.rebuild != None:
+  if args.rebuild is not None:
     rebuild = args.rebuild
-  if args.buildstatebreakdown != None:
+  if args.buildstatebreakdown is not None:
     show_bs_breakdown = args.buildstatebreakdown
+
+  if not target:
+    target = None
+  if not sysroot:
+    sysroot = None
+  if not sysroot_path:
+    sysroot_path = None
+  if not toolchain:
+    toolchain = None
 
   # pkgpath = sys.argv[1]
   # builddir = sys.argv[2]
-
 
   # SCRIPT BEGINNING, MOVE THIS SOMEWHERE!!!
   bench = StateBenchmark()
@@ -376,9 +601,18 @@ def main():
 
   recipe = read_recipe(f"{pkgpath_real}/recipe.py")
 
-  ctx = BuildContext(os.path.abspath(builddir), os.path.abspath(pkgpath_real), recipe)
+  ctx = BuildContext(os.path.abspath(builddir), os.path.abspath(pkgpath_real), recipe, sysroot, sysroot_path, toolchain, target)
   log(None, f"NPROC: {ctx.NPROC}")
 
+  if ctx.SYSROOT is not None:
+    log(None, f"Target: {ctx.TARGET}")
+    if ctx.SYSROOT_LOOKUP_DIR is not None:
+      log(None, f"Sysroot lookup directory: {ctx.SYSROOT_LOOKUP_DIR}")
+    if ctx.TARGET_DIR is not None:
+      log(None, f"Target directory: {ctx.TARGET_DIR}")
+    log(None, f"Resolved sysroot: {ctx.SYSROOT}")
+    log(None, f"Toolchain: {ctx.TOOLCHAIN}")
+    log(None, f"Cross compiler: {ctx.CC}")
 
   # ok so normally I would make this a config option but removing the pkgdir is neccesary to avoid
   # accidentally including the leftover files from unsuccessful builds.
@@ -392,7 +626,6 @@ def main():
   if redownload and os.path.exists(ctx.SRCDIR):
     log(Colors.SH_COMMAND, f"Removing {ctx.SRCDIR} as redownload flag has been passed!")
     shutil.rmtree(ctx.SRCDIR)
-
 
   bench.change(State.DOWNLOAD)
   log(None, "Downloading files")
@@ -427,7 +660,6 @@ def main():
   bench.change(State.INSTALL)
   ctx.install()
 
-
   # make apk
   # TODO: at the top of main(), run a preflight() to check if apk and various other important things are available.
   # TODO: move all apk related operations to its own module.
@@ -460,7 +692,7 @@ def main():
   run_apk(apkcmd)
 
   bench.change(State.DONE)
-  log(Colors.SUCCESS,f"Done! Generated {outpath} ({human_fsize(outpath)})")
+  log(Colors.SUCCESS, f"Done! Generated {outpath} ({human_fsize(outpath)})")
   if show_bs_breakdown:
     print()
     log(Colors.SUCCESS, f"Build Breakdown")
