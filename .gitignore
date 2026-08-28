@@ -7,6 +7,8 @@ staging/apk-tools
 
 # temporary shit
 build/
+etc/scripts/build/
+sysroots/
 *.apk
 .env*
 
