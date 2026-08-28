@@ -3,19 +3,24 @@ pkgver = "1.0.8"
 pkgrel = 0
 pkgdesc = "A high-quality data compression program"
 url = "https://sourceware.org/bzip2/"
-arch = "x86_64"
-license = "BSD"
-
-
 sources = [f"https://sourceware.org/pub/{pkgname}/{pkgname}-{pkgver}.tar.gz"]
 depends = ["libc", 'sh']
 makedepends = ['sed']
+arch = ["x86_64", "aarch64"]
+license = "BSD"
+
+
 
 
 def build(c):
+  makevars = [
+      f"CC={c.CC}",
+      f"AR={c.AR}",
+      f"RANLIB={c.RANLIB}",
+  ]
   c.SRCDIR += f"/{pkgname}-{pkgver}"
-  c.sh(f"make -j{c.NPROC} -f Makefile-libbz2_so")
-  c.sh(f"make -j{c.NPROC} bzip2 bzip2recover")
+  c.sh("make", *makevars, f"-j{c.NPROC}", "-f", "Makefile-libbz2_so")
+  c.sh("make", *makevars, f"-j{c.NPROC}", "bzip2", "bzip2recover")
 
 
 def install(c):
