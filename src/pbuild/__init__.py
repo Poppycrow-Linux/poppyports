@@ -264,7 +264,7 @@ needs_exe_wrapper = true
 
 [host_machine]
 system = 'linux'
-cpu_family = '{platform.machine()}'
+cpu_family = '{self.ARCH}'
 cpu = '{self.ARCH}'
 endian = 'little'
 """)
