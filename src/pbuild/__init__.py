@@ -11,6 +11,7 @@ import subprocess
 import tarfile
 import urllib.request
 
+from .buildstyles import get_build_style
 from .logutil import State, StateBenchmark, human_fsize
 
 
@@ -152,6 +153,7 @@ class BuildContext:  # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
     self.TARGET_DIR = None
     self.SYSROOT = None
     self.TOOLCHAIN = os.path.abspath(toolchain) if toolchain else None
+    self.HOST_TRIPLE = None
     self.TRIPLE = None
     self.CC = "cc"
     self.CXX = "c++"
@@ -159,6 +161,10 @@ class BuildContext:  # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
     self.RANLIB = "ranlib"
     self.STRIP = "strip"
     self.NM = "nm"
+
+    for i in "gcc", "clang":
+      if shutil.which(i) != None:
+        self.HOST_TRIPLE = subprocess.check_output([i, "-dumpmachine"], text=True).strip()
 
     if self.SYSROOT_PATH is None and self.SYSROOT_LOOKUP_DIR is not None:
       self.TARGET_DIR = os.path.join(self.SYSROOT_LOOKUP_DIR, self.TARGET)
@@ -218,6 +224,52 @@ class BuildContext:  # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
   def install_dir(self, directory, mode="755"):
     self.sh("install", "-d", "-v", "-m", mode, directory)
 
+  def run_build_style(self):
+    style_name = self.recipe["build_style"]
+
+    try:
+      style = BUILD_STYLES[style_name](self)
+    except KeyError as error:
+      raise InvalidRecipeError(f"unknown build style: {style_name}") from error
+
+    style.run()
+
+  def workdir(self):
+    return os.path.join(self.SRCDIR, self.recipe.get("build_wrksrc", ""))
+
+  def builddir(self):
+    path = os.path.join(self.BUILDDIR, "build")
+    os.makedirs(path, exist_ok=True)
+    return path
+
+  def write_meson_cross_file(self):
+    if self.SYSROOT is None:
+      return None
+
+    path = os.path.join(self.BUILDDIR, "pbuild-meson-cross.ini")
+
+    with open(path, "w") as file:
+      file.write(f"""\
+[binaries]
+c = '{self.CC}'
+cpp = '{self.CXX}'
+ar = '{self.AR}'
+strip = '{self.STRIP}'
+pkgconfig = 'pkg-config'
+
+[properties]
+sys_root = '{self.SYSROOT}'
+needs_exe_wrapper = true
+
+[host_machine]
+system = 'linux'
+cpu_family = '{self.meson_cpu_family()}'
+cpu = '{self.ARCH}'
+endian = 'little'
+""")
+
+    return path
+
   def apply_patches(self):
     patchdir = self.PORTDIR + "/patches"
     if not os.path.exists(patchdir): return  # no patches to apply
@@ -229,7 +281,12 @@ class BuildContext:  # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
     self.sh(f"chmod", mode, *paths)
 
   def build(self):
-    self.recipe["build"](self)
+    if "build_style" in self.recipe:
+      get_build_style(self.recipe["build_style"], self).run()
+    elif "build" in self.recipe:
+      self.recipe["build"](self)
+    else:
+      raise InvalidRecipeError("recipe has neither build_style nor build")
 
   def write_cmake_toolchain(self):
     if self.SYSROOT is None:
@@ -262,7 +319,12 @@ set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
     return path
 
   def install(self):
-    self.recipe["install"](self)
+    if "build_style" in self.recipe:
+      get_build_style(self.recipe["build_style"], self).run()
+    elif "install" in self.recipe:
+      self.recipe["install"](self)
+    else:
+      raise InvalidRecipeError("recipe has neither build_style nor build")
 
   def make_build_environment(self):
     env = os.environ.copy()
@@ -352,7 +414,8 @@ def read_recipe(path):
     REQUIRED_KEYS = {"sources", "pkgname", "build", "install", "arch", "pkgver"}
     missing_keys = REQUIRED_KEYS - recipe_def.keys()  # this is set subtraction
     if missing_keys:
-      raise InvalidRecipeError(f"This recipe is missing the {', '.join(missing_keys)} key(s)!")
+      pass
+      # raise InvalidRecipeError(f"This recipe is missing the {', '.join(missing_keys)} key(s)!")
     return recipe_def
 
 
