@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import tarfile
 import urllib.request
+import platform
 
 from .buildstyles import get_build_style
 from .logutil import State, StateBenchmark, human_fsize
@@ -263,7 +264,7 @@ needs_exe_wrapper = true
 
 [host_machine]
 system = 'linux'
-cpu_family = '{self.meson_cpu_family()}'
+cpu_family = '{platform.machine()}'
 cpu = '{self.ARCH}'
 endian = 'little'
 """)
