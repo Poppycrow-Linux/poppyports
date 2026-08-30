@@ -1,22 +1,25 @@
-recipever = 0
+# this is the linux-stable recipe, which also serves as an example on how to package a generic Linux
 pkgname = "linux-stable"
-pkgver = "7.1.9"
+pkgver = "7.2.2"
 pkgrel = 0
-pkgdesc = "Linux Kernel (stable)"
-url = "https://kernel.org/"
-arch = "x86_64"
-license = "GPL v2"
+pkgdesc = "The Linux kernel (stable)"
+url = "https://www.kernel.org/"
+arch = ["x86_64", "aarch64", "armv7", "i686", "riscv64", "ppc64le", "s390x"]
+license = "GPL-2.0-only"
 
 sources = [f"https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-{pkgver}.tar.xz"]
-depends = []
 
-def build(c):
-  c.SRCDIR = c.SRCDIR + f"/linux-{pkgver}" # TODO fix this is because tar files have a top level name
-  c.sh("make", "defconfig")
-  c.cp(f"{c.PORTDIR}/.config",f"{c.SRCDIR}/.config")
-  c.sh("make",f"-j{c.NPROC}","LLVM=1")
-  #c.sh("make","modules_install",f"-j{c.NPROC}")
+depends = ["libc", "linux-headers"]
+makedepends = ["bc", "bison", "flex", "make", "openssl", "perl"]
 
-def install(c):
-  c.sh("mkdir", "-p", f"{c.PKGDIR}/boot")
-  c.sh("cp", f"{c.SRCDIR}/arch/x86/boot/bzImage",f"{c.PKGDIR}/boot/bzImage")
+build_style = "kernel"
+build_wrksrc = f"linux-{pkgver}"
+
+kernel_config = ".config" # looks for a config in {c.PORTDIR}/{kernel_config}
+kernel_defconfig = "defconfig" # this is what kind of make target runs if the config is not present
+kernel_make_args = [] # if you guess what this does i am going to kill myself
+kernel_make_targets = [""] # what make target is called on build. we leave it empty because make already produces a kernel.
+kernel_install_image = True # puts the bzimage into /boot, true by default
+kernel_install_modules = True # whether or not to include modules in the package
+
+make_check = False # runs the kernel self-test
