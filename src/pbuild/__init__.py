@@ -61,6 +61,15 @@ class Colors:
   SH_COMMAND = "\x1b[0;97;48;5;21m"
   END = "\x1b[0m"
 
+KERNEL_ARCHES = {
+  "x86_64": "x86",
+  "aarch64": "arm64",
+  "armv7": "arm",
+  "i686": "x86",
+  "riscv64": "riscv",
+  "ppc64le": "powerpc",
+  "s390x": "s390",
+}
 
 def log(clr, *args):
   if (supressnonerrorlogs and (clr in {Colors.SUCCESS, Colors.ERROR, Colors.WARNING})) or not (supressnonerrorlogs):
@@ -135,15 +144,12 @@ class BuildContext:  # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
     self.SRCDIR = os.path.join(builddir, "pkgsrc")
     self.PKGDIR = os.path.join(builddir, "pkgdir")
     os.makedirs(self.SRCDIR, exist_ok=True)
-    os.makedirs(self.PKGDIR, exist_ok=True)
+
 
     self.NPROC = os.cpu_count() or 1
-    self.LIBC = "glibc"  # possible musl variant in the future TODO: package musl
-    # i think this is wrong? ARCH would refer to our target architecture whereas recipe arch is the arch it can be built for
-    # TODO: this should be replaced with if checks
-    self.ARCH = recipe["arch"]
+    self.LIBC = "glibc"  # possible musl variant in the future TODO: package musl. @cachewave make a musl toolchain builder then ok?
     self.TARGET = target or f"{self.ARCH}-{self.LIBC}"
-    self.ARCH, self.LIBC = split_target(self.TARGET)
+    self.ARCH, self.LIBC = split_target(self.TARGET) ## ARCH and LIBC refer to target here!! not host.
     self.recipe = recipe
     self.recipe["depends"] = [
       self.LIBC if pkg == "libc" else pkg for pkg in self.recipe["depends"]
@@ -151,7 +157,7 @@ class BuildContext:  # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
 
     self.SYSROOT_LOOKUP_DIR = os.path.abspath(sysroot) if sysroot else None
     self.SYSROOT_PATH = os.path.abspath(sysroot_path) if sysroot_path else None
-    self.TARGET_DIR = None
+    self.TARGET_DIR = None # this is the sysroot and toolchain dir so it would refer to something like /sysroots/aarch64-glibc
     self.SYSROOT = None
     self.TOOLCHAIN = os.path.abspath(toolchain) if toolchain else None
     self.HOST_TRIPLE = None
@@ -192,6 +198,12 @@ class BuildContext:  # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
     self.env = self.make_build_environment()
     # self.env["DESTDIR"] = self.pkgdir
     # self.env["CFLAGS"] = self.CFLAGS
+
+  def kernel_arch(self):
+    try:
+      return KERNEL_ARCHES[self.ARCH]
+    except KeyError as error:
+      raise InvalidRecipeError(f"unsupported kernel architecture: {self.ARCH}") from error
 
   def sh(self, *args, cwd=None, shell=False):
     if cwd is None: cwd = self.SRCDIR
@@ -321,7 +333,7 @@ set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
   def install(self):
     if "build_style" in self.recipe:
-      get_build_style(self.recipe["build_style"], self).run()
+      pass # build already runs the whole lifecycle of the buildstyle
     elif "install" in self.recipe:
       self.recipe["install"](self)
     else:
@@ -680,8 +692,11 @@ def main():
 
   # ok so normally I would make this a config option but removing the pkgdir is neccesary to avoid
   # accidentally including the leftover files from unsuccessful builds.
+  if rebuild and os.path.exists(ctx.PKGDIR):
+    log(Colors.SH_COMMAND, f"Removing {ctx.PKGDIR}")
+    shutil.rmtree(ctx.PKGDIR)
   os.makedirs(ctx.BUILDDIR, exist_ok=True)
-
+  os.makedirs(ctx.PKGDIR, exist_ok=True)
   outpath = f"{builddir}/{recipe['pkgname']}-{recipe['pkgver']}.apk"
   if os.path.exists(outpath) and not rebuild:
     log(Colors.WARNING, f"Skipping build as {outpath} already exists. If you need to rebuild, pass the -rebuild flag to force rebuilding.")
@@ -718,11 +733,13 @@ def main():
     log(None, "Extracting source...")
     extract_src(ctx, recipe)
 
+  os.makedirs(ctx.PKGDIR, exist_ok=True)
   log(None, "Building...")
   bench.change(State.BUILD)
   ctx.build()
   bench.change(State.INSTALL)
   ctx.install()
+
 
   # make apk
   # TODO: at the top of main(), run a preflight() to check if apk and various other important things are available.
