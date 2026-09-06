@@ -1,5 +1,5 @@
 from .base import BuildStyle
-
+from ..crossutils import write_meson_cross_file
 
 class MesonStyle(BuildStyle):
   name = "meson"
