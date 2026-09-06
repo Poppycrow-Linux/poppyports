@@ -3,8 +3,32 @@ import os
 import time
 from enum import Enum
 
+# exceptions
+class InvalidRecipeError(Exception):
+  pass
+class InvalidChecksumError(Exception):
+  pass
+
 # TODO: here move log() and Colors and such
 
+# ANSI colors and printing
+class Colors:
+  ERROR = "\x1b[5;97;101m"
+  WARNING = "\x1b[5;30;103m"
+  SUCCESS = "\x1b[0;97;48;5;28m"
+  SH_COMMAND = "\x1b[0;97;48;5;21m"
+  END = "\x1b[0m"
+
+important_colors = [Colors.SUCCESS, Colors.ERROR, Colors.WARNING]
+
+# THIS IS TEMPORARY someone PLEASE find a way to make colorless and cleaner logs work without reading the config and args 9 billion times
+def log(clr, *args):
+    print(f"{clr if (clr is not None) else ''}I:", *args, Colors.END)
+
+# not used due to config parameter complications
+def log_new(clr, supressnonerrorlogs, color, *args):
+  if (supressnonerrorlogs and (clr in important_colors)) or not (supressnonerrorlogs):
+    print(f"{clr if (clr is not None and color) else ''}I:", *args, Colors.END)
 
 def human_fsize(path):
   size = os.path.getsize(path)

@@ -1,0 +1,252 @@
+import os
+import sys
+import shlex
+import shutil
+from .logutil import Colors, InvalidRecipeError, log
+from .crossutils import *
+from .crossutils import KERNEL_ARCHES # dirty HACK probably should make the buildstyle import kernel arches or something
+import subprocess
+from .buildstyles import get_build_style
+
+## TODO: unify the log function and also make it work with the config and parameters and whatnot!!!
+
+class BuildContext:  # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
+  ARCH = "x86_64"  # RUDE: fuck arm developer
+  CFLAGS = ""  # "-Dick"
+  CXXFLAGS = ""
+  LDFLAGS = ""  # "-Dick2"
+  SRCDIR = None  # this is package source directory
+  PKGDIR = None  # this is package staging directory i.e. where it will be installed
+  NPROC = 1
+  SYSROOT = None
+  SYSROOT_PATH = None
+  SYSROOT_LOOKUP_DIR = None
+  TARGET_DIR = None
+  TOOLCHAIN = None
+  TRIPLE = None
+  TARGET = None
+  LIBC = ""
+
+  def __init__(self, builddir, portdir, recipe, sysroot=None, sysroot_path=None, toolchain=None, target=None):
+    self.BUILDDIR = builddir
+    self.PORTDIR = portdir
+    self.SRCDIR = os.path.join(builddir, "pkgsrc")
+    self.PKGDIR = os.path.join(builddir, "pkgdir")
+    os.makedirs(self.SRCDIR, exist_ok=True)
+
+
+    self.NPROC = os.cpu_count() or 1
+    self.LIBC = "glibc"  # possible musl variant in the future TODO: package musl. @cachewave make a musl toolchain builder then ok?
+    self.TARGET = target or f"{self.ARCH}-{self.LIBC}"
+    self.ARCH, self.LIBC = split_target(self.TARGET) ## ARCH and LIBC refer to target here!! not host.
+    self.recipe = recipe
+    self.recipe["depends"] = [
+      self.LIBC if pkg == "libc" else pkg for pkg in self.recipe["depends"]
+    ]
+
+    self.SYSROOT_LOOKUP_DIR = os.path.abspath(sysroot) if sysroot else None
+    self.SYSROOT_PATH = os.path.abspath(sysroot_path) if sysroot_path else None
+    self.TARGET_DIR = None # this is the sysroot and toolchain dir so it would refer to something like /sysroots/aarch64-glibc
+    self.SYSROOT = None
+    self.TOOLCHAIN = os.path.abspath(toolchain) if toolchain else None
+    self.HOST_TRIPLE = None
+    self.TRIPLE = None
+    self.CC = "cc"
+    self.CXX = "c++"
+    self.AR = "ar"
+    self.RANLIB = "ranlib"
+    self.STRIP = "strip"
+    self.NM = "nm"
+
+    for i in "gcc", "clang":
+      if shutil.which(i) != None:
+        self.HOST_TRIPLE = subprocess.check_output([i, "-dumpmachine"], text=True).strip()
+
+    if self.SYSROOT_PATH is None and self.SYSROOT_LOOKUP_DIR is not None:
+      self.TARGET_DIR = os.path.join(self.SYSROOT_LOOKUP_DIR, self.TARGET)
+      self.SYSROOT_PATH = os.path.join(self.TARGET_DIR, "sysroot")
+
+    if self.SYSROOT_PATH is not None:
+      self.SYSROOT = self.SYSROOT_PATH
+      self.TRIPLE = target_triple(self.ARCH, self.LIBC)
+
+      if self.TOOLCHAIN is None:
+        if self.TARGET_DIR is not None:
+          self.TOOLCHAIN = os.path.join(self.TARGET_DIR, "toolchain")
+        else:
+          self.TOOLCHAIN = os.path.join(os.path.dirname(self.SYSROOT), "toolchain")
+
+      toolbindir = os.path.join(self.TOOLCHAIN, "bin")
+      self.CC = os.path.join(toolbindir, f"{self.TRIPLE}-gcc")
+      self.CXX = os.path.join(toolbindir, f"{self.TRIPLE}-g++")
+      self.AR = os.path.join(toolbindir, f"{self.TRIPLE}-ar")
+      self.RANLIB = os.path.join(toolbindir, f"{self.TRIPLE}-ranlib")
+      self.STRIP = os.path.join(toolbindir, f"{self.TRIPLE}-strip")
+      self.NM = os.path.join(toolbindir, f"{self.TRIPLE}-nm")
+
+    self.env = self.make_build_environment()
+    # self.env["DESTDIR"] = self.pkgdir
+    # self.env["CFLAGS"] = self.CFLAGS
+
+  def kernel_arch(self):
+    try:
+      return KERNEL_ARCHES[self.ARCH]
+    except KeyError as error:
+      raise InvalidRecipeError(f"unsupported kernel architecture: {self.ARCH}") from error
+
+  def sh(self, *args, cwd=None, shell=False):
+    if cwd is None: cwd = self.SRCDIR
+    if len(args) == 1: shell = True
+
+    # shell=True requires a string to be passed in i assume
+    # good catch sam it's exactly how it works
+    cmd = " ".join(args) if shell else args
+
+    log(Colors.SH_COMMAND, f"+$ {' '.join(args) if isinstance(cmd, tuple) else cmd}")
+    subprocess.run(cmd, cwd=cwd, env=self.env, check=True, shell=shell)
+
+  def cp(self, frm, to):
+    self.sh("cp", "-r", "-v", frm, to)
+
+  def lnk(self, source, dest, relative=False, force=False):
+    source = str(source)
+    dest = str(dest)
+    cwd = None
+    if relative:
+      cwd = os.path.abspath(os.path.dirname(dest) or ".")
+      source = os.path.relpath(os.path.abspath(source), start=cwd)
+    if force and os.path.lexists(dest):
+      self.sh(f'rm -f -- {quote(dest)}', cwd=cwd)
+    self.sh(f'ln -s -- {quote(source)} {quote(dest)}', cwd=cwd)
+
+  def install_file(self, source, destination, mode=None):
+    args = ["install", "-D", "-v"]
+    if mode is not None: args += ["-m", str(mode)]
+    self.sh(*args, source, destination)
+
+  def install_dir(self, directory, mode="755"):
+    self.sh("install", "-d", "-v", "-m", mode, directory)
+
+  def run_build_style(self):
+    style_name = self.recipe["build_style"]
+
+    try:
+      style = BUILD_STYLES[style_name](self)
+    except KeyError as error:
+      raise InvalidRecipeError(f"unknown build style: {style_name}") from error
+
+    style.run()
+
+  def workdir(self):
+    return os.path.join(self.SRCDIR, self.recipe.get("build_wrksrc", ""))
+
+  def builddir(self): # this is intended for shit like Meson that Refuses to build things in tree
+    path = os.path.join(self.SRCDIR, "build")
+    os.makedirs(path, exist_ok=True)
+    return path
+
+  def apply_patches(self):
+    patchdir = self.PORTDIR + "/patches"
+    if not os.path.exists(patchdir): return  # no patches to apply
+    for path, dirs, files in os.walk(patchdir):
+      for patch in files:
+        self.sh("patch", "-p1", "-i", f"{path}/{patch}")
+
+  def chmod(self, mode, *paths):
+    self.sh(f"chmod", mode, *paths)
+
+  def build(self):
+    if "build_style" in self.recipe:
+      get_build_style(self.recipe["build_style"], self).run()
+    elif "build" in self.recipe:
+      self.recipe["build"](self)
+    else:
+      raise InvalidRecipeError("recipe has neither build_style nor build")
+
+
+  def install(self):
+    if "build_style" in self.recipe:
+      pass # build already runs the whole lifecycle of the buildstyle
+    elif "install" in self.recipe:
+      self.recipe["install"](self)
+    else:
+      raise InvalidRecipeError("recipe has neither build_style nor build")
+
+  def make_build_environment(self):
+    env = os.environ.copy()
+
+    if self.SYSROOT is None:
+      return env
+
+    if self.SYSROOT_LOOKUP_DIR is not None and not os.path.isdir(self.SYSROOT_LOOKUP_DIR):
+      raise InvalidRecipeError(f"sysroot lookup directory does not exist: {self.SYSROOT_LOOKUP_DIR}")
+
+    if self.TARGET_DIR is not None and not os.path.isdir(self.TARGET_DIR):
+      raise InvalidRecipeError(f"target directory does not exist: {self.TARGET_DIR}")
+
+    if not os.path.isdir(self.SYSROOT):
+      raise InvalidRecipeError(f"sysroot does not exist: {self.SYSROOT}")
+
+    if not os.path.isdir(self.TOOLCHAIN):
+      raise InvalidRecipeError(f"toolchain directory does not exist: {self.TOOLCHAIN}")
+
+    toolbindir = os.path.join(self.TOOLCHAIN, "bin")
+    if not os.path.isdir(toolbindir):
+      raise InvalidRecipeError(f"toolchain bin directory does not exist: {toolbindir}")
+
+    if not os.path.isfile(self.CC):
+      raise InvalidRecipeError(f"cross compiler does not exist: {self.CC}")
+
+    # These can cause host development files to leak into the build.
+    for key in (
+      "CPATH",
+      "C_INCLUDE_PATH",
+      "CPLUS_INCLUDE_PATH",
+      "OBJC_INCLUDE_PATH",
+      "LIBRARY_PATH",
+      "PKG_CONFIG_PATH",
+      "PKG_CONFIG_LIBDIR",
+      "PKG_CONFIG_SYSROOT_DIR",
+    ):
+      env.pop(key, None)
+
+    sysroot = self.SYSROOT
+
+    pkgconfig_dirs = [
+      os.path.join(sysroot, "usr", "lib", "pkgconfig"),
+      os.path.join(sysroot, "usr", "lib64", "pkgconfig"),
+      os.path.join(sysroot, "usr", "lib", self.TRIPLE, "pkgconfig"),
+      os.path.join(sysroot, "usr", "share", "pkgconfig"),
+      os.path.join(sysroot, "lib", "pkgconfig"),
+      os.path.join(sysroot, "lib64", "pkgconfig"),
+    ]
+
+    env.update({
+      "PATH": os.pathsep.join((toolbindir, env.get("PATH", ""))),
+      "CC": self.CC,
+      "CXX": self.CXX,
+      "AR": self.AR,
+      "RANLIB": self.RANLIB,
+      "STRIP": self.STRIP,
+      "NM": self.NM,
+
+      "CPPFLAGS": f"--sysroot={sysroot}",
+      "CFLAGS": f"--sysroot={sysroot} {self.CFLAGS}".strip(),
+      "CXXFLAGS": f"--sysroot={sysroot} {self.CXXFLAGS}".strip(),
+      "LDFLAGS": f"--sysroot={sysroot} {self.LDFLAGS}".strip(),
+
+      # fuck over pkgconfig so it cannot look for path on the host
+      "PKG_CONFIG_PATH": "",
+      "PKG_CONFIG_LIBDIR": os.pathsep.join(pkgconfig_dirs),
+      "PKG_CONFIG_SYSROOT_DIR": sysroot,
+
+      # some makefiles understand it
+      "CROSS_COMPILE": self.TRIPLE + "-",
+
+      # no more setting destdir manually
+      "DESTDIR": self.PKGDIR,
+
+      "CMAKE_TOOLCHAIN_FILE": write_cmake_toolchain(self.SYSROOT, self.BUILDDIR, self.ARCH, self.CC, self.CXX, self.AR, self.RANLIB, self.STRIP),
+    })
+
+    return env

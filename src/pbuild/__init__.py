@@ -11,21 +11,26 @@ import subprocess
 import tarfile
 import urllib.request
 import platform
+from dataclasses import dataclass, field
 
-from .buildstyles import get_build_style
-from .logutil import State, StateBenchmark, human_fsize
 
+from .buildcontext import BuildContext
+from .logutil import State, StateBenchmark, human_fsize, Colors, InvalidRecipeError, InvalidChecksumError
+from .config import load_config
+
+def log(clr, *args):
+  if (supressnonerrorlogs and (clr in important_colors)) or not (supressnonerrorlogs):
+    print(f"{clr if (clr is not None and color) else ''}I:", *args, Colors.END)
 
 supressnonerrorlogs = False  # set as a global variable so the log function would Know
 color = True  # same as above
 
+def log(clr, *args):
+  if (supressnonerrorlogs and (clr in important_colors)) or not (supressnonerrorlogs):
+    print(f"{clr if (clr is not None and color) else ''}I:", *args, Colors.END)
+
 # exceptions
-class InvalidRecipeError(Exception):
-  pass
 
-
-class InvalidChecksumError(Exception):
-  pass
 
 
 # sam: I don't know what you just said but there HAS to be a better way to do this valera. #gotowork
@@ -53,24 +58,6 @@ class OptionalBoolAction(argparse.Action):
       raise argparse.ArgumentTypeError(f"invalid boolean value for {option_string}: {values}")
 
 
-# ANSI colors and printing
-class Colors:
-  ERROR = "\x1b[5;97;101m"
-  WARNING = "\x1b[5;30;103m"
-  SUCCESS = "\x1b[0;97;48;5;28m"
-  SH_COMMAND = "\x1b[0;97;48;5;21m"
-  END = "\x1b[0m"
-
-KERNEL_ARCHES = {
-  "x86_64": "x86",
-  "aarch64": "arm64",
-  "armv7": "arm",
-  "i686": "x86",
-  "riscv64": "riscv",
-  "ppc64le": "powerpc",
-  "s390x": "s390",
-}
-
 def log(clr, *args):
   if (supressnonerrorlogs and (clr in {Colors.SUCCESS, Colors.ERROR, Colors.WARNING})) or not (supressnonerrorlogs):
     print(f"{clr if (clr is not None and color) else ''}I:", *args, Colors.END)
@@ -78,346 +65,6 @@ def log(clr, *args):
 
 def quote(x):
   return shlex.quote(str(x))
-
-
-def target_triple(arch, libc="glibc", vendor="crow"):
-  if libc == "glibc":
-    libc_suffix = "gnu"
-  elif libc == "musl":
-    libc_suffix = "musl"
-  else:
-    raise ValueError(f"unsupported libc: {libc}")
-
-  if arch == "x86_64":
-    return f"x86_64-{vendor}-linux-{libc_suffix}"
-  if arch == "aarch64":
-    return f"aarch64-{vendor}-linux-{libc_suffix}"
-  if arch == "armv7":
-    suffix = "gnueabihf" if libc == "glibc" else "musleabihf"
-    return f"arm-{vendor}-linux-{suffix}"
-  if arch == "i686":
-    return f"i686-{vendor}-linux-{libc_suffix}"
-  if arch == "riscv64":
-    return f"riscv64-{vendor}-linux-{libc_suffix}"
-  if arch == "ppc64le":
-    return f"powerpc64le-{vendor}-linux-{libc_suffix}"
-  if arch == "s390x":
-    return f"s390x-{vendor}-linux-{libc_suffix}"
-
-  raise ValueError(f"unsupported target architecture: {arch}")
-
-
-def split_target(target):
-  try:
-    arch, libc = target.rsplit("-", 1)
-  except ValueError as error:
-    raise InvalidRecipeError(f"invalid target: {target}; expected ARCH-LIBC") from error
-
-  try:
-    target_triple(arch, libc)
-  except ValueError as error:
-    raise InvalidRecipeError(str(error)) from error
-
-  return arch, libc
-
-
-class BuildContext:  # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
-  ARCH = "x86_64"  # RUDE: fuck arm developer
-  CFLAGS = ""  # "-Dick"
-  CXXFLAGS = ""
-  LDFLAGS = ""  # "-Dick2"
-  SRCDIR = None  # this is package source directory
-  PKGDIR = None  # this is package staging directory i.e. where it will be installed
-  NPROC = 1
-  SYSROOT = None
-  SYSROOT_PATH = None
-  SYSROOT_LOOKUP_DIR = None
-  TARGET_DIR = None
-  TOOLCHAIN = None
-  TRIPLE = None
-  TARGET = None
-  LIBC = ""
-
-  def __init__(self, builddir, portdir, recipe, sysroot=None, sysroot_path=None, toolchain=None, target=None):
-    self.BUILDDIR = builddir
-    self.PORTDIR = portdir
-    self.SRCDIR = os.path.join(builddir, "pkgsrc")
-    self.PKGDIR = os.path.join(builddir, "pkgdir")
-    os.makedirs(self.SRCDIR, exist_ok=True)
-
-
-    self.NPROC = os.cpu_count() or 1
-    self.LIBC = "glibc"  # possible musl variant in the future TODO: package musl. @cachewave make a musl toolchain builder then ok?
-    self.TARGET = target or f"{self.ARCH}-{self.LIBC}"
-    self.ARCH, self.LIBC = split_target(self.TARGET) ## ARCH and LIBC refer to target here!! not host.
-    self.recipe = recipe
-    self.recipe["depends"] = [
-      self.LIBC if pkg == "libc" else pkg for pkg in self.recipe["depends"]
-    ]
-
-    self.SYSROOT_LOOKUP_DIR = os.path.abspath(sysroot) if sysroot else None
-    self.SYSROOT_PATH = os.path.abspath(sysroot_path) if sysroot_path else None
-    self.TARGET_DIR = None # this is the sysroot and toolchain dir so it would refer to something like /sysroots/aarch64-glibc
-    self.SYSROOT = None
-    self.TOOLCHAIN = os.path.abspath(toolchain) if toolchain else None
-    self.HOST_TRIPLE = None
-    self.TRIPLE = None
-    self.CC = "cc"
-    self.CXX = "c++"
-    self.AR = "ar"
-    self.RANLIB = "ranlib"
-    self.STRIP = "strip"
-    self.NM = "nm"
-
-    for i in "gcc", "clang":
-      if shutil.which(i) != None:
-        self.HOST_TRIPLE = subprocess.check_output([i, "-dumpmachine"], text=True).strip()
-
-    if self.SYSROOT_PATH is None and self.SYSROOT_LOOKUP_DIR is not None:
-      self.TARGET_DIR = os.path.join(self.SYSROOT_LOOKUP_DIR, self.TARGET)
-      self.SYSROOT_PATH = os.path.join(self.TARGET_DIR, "sysroot")
-
-    if self.SYSROOT_PATH is not None:
-      self.SYSROOT = self.SYSROOT_PATH
-      self.TRIPLE = target_triple(self.ARCH, self.LIBC)
-
-      if self.TOOLCHAIN is None:
-        if self.TARGET_DIR is not None:
-          self.TOOLCHAIN = os.path.join(self.TARGET_DIR, "toolchain")
-        else:
-          self.TOOLCHAIN = os.path.join(os.path.dirname(self.SYSROOT), "toolchain")
-
-      toolbindir = os.path.join(self.TOOLCHAIN, "bin")
-      self.CC = os.path.join(toolbindir, f"{self.TRIPLE}-gcc")
-      self.CXX = os.path.join(toolbindir, f"{self.TRIPLE}-g++")
-      self.AR = os.path.join(toolbindir, f"{self.TRIPLE}-ar")
-      self.RANLIB = os.path.join(toolbindir, f"{self.TRIPLE}-ranlib")
-      self.STRIP = os.path.join(toolbindir, f"{self.TRIPLE}-strip")
-      self.NM = os.path.join(toolbindir, f"{self.TRIPLE}-nm")
-
-    self.env = self.make_build_environment()
-    # self.env["DESTDIR"] = self.pkgdir
-    # self.env["CFLAGS"] = self.CFLAGS
-
-  def kernel_arch(self):
-    try:
-      return KERNEL_ARCHES[self.ARCH]
-    except KeyError as error:
-      raise InvalidRecipeError(f"unsupported kernel architecture: {self.ARCH}") from error
-
-  def sh(self, *args, cwd=None, shell=False):
-    if cwd is None: cwd = self.SRCDIR
-    if len(args) == 1: shell = True
-
-    # shell=True requires a string to be passed in i assume
-    cmd = " ".join(args) if shell else args
-
-    log(Colors.SH_COMMAND, f"+$ {' '.join(args) if isinstance(cmd, tuple) else cmd}")
-    subprocess.run(cmd, cwd=cwd, env=self.env, check=True, shell=shell)
-
-  def cp(self, frm, to):
-    self.sh("cp", "-r", "-v", frm, to)
-
-  def lnk(self, source, dest, relative=False, force=False):
-    source = str(source)
-    dest = str(dest)
-    cwd = None
-    if relative:
-      cwd = os.path.abspath(os.path.dirname(dest) or ".")
-      source = os.path.relpath(os.path.abspath(source), start=cwd)
-    if force and os.path.lexists(dest):
-      self.sh(f'rm -f -- {quote(dest)}', cwd=cwd)
-    self.sh(f'ln -s -- {quote(source)} {quote(dest)}', cwd=cwd)
-
-  def install_file(self, source, destination, mode=None):
-    args = ["install", "-D", "-v"]
-    if mode is not None: args += ["-m", str(mode)]
-    self.sh(*args, source, destination)
-
-  def install_dir(self, directory, mode="755"):
-    self.sh("install", "-d", "-v", "-m", mode, directory)
-
-  def run_build_style(self):
-    style_name = self.recipe["build_style"]
-
-    try:
-      style = BUILD_STYLES[style_name](self)
-    except KeyError as error:
-      raise InvalidRecipeError(f"unknown build style: {style_name}") from error
-
-    style.run()
-
-  def workdir(self):
-    return os.path.join(self.SRCDIR, self.recipe.get("build_wrksrc", ""))
-
-  def builddir(self):
-    path = os.path.join(self.BUILDDIR, "build")
-    os.makedirs(path, exist_ok=True)
-    return path
-
-  def write_meson_cross_file(self):
-    if self.SYSROOT is None:
-      return None
-
-    path = os.path.join(self.BUILDDIR, "pbuild-meson-cross.ini")
-
-    with open(path, "w") as file:
-      file.write(f"""\
-[binaries]
-c = '{self.CC}'
-cpp = '{self.CXX}'
-ar = '{self.AR}'
-strip = '{self.STRIP}'
-pkgconfig = 'pkg-config'
-
-[properties]
-sys_root = '{self.SYSROOT}'
-needs_exe_wrapper = true
-
-[host_machine]
-system = 'linux'
-cpu_family = '{self.ARCH}'
-cpu = '{self.ARCH}'
-endian = 'little'
-""")
-
-    return path
-
-  def apply_patches(self):
-    patchdir = self.PORTDIR + "/patches"
-    if not os.path.exists(patchdir): return  # no patches to apply
-    for path, dirs, files in os.walk(patchdir):
-      for patch in files:
-        self.sh("patch", "-p1", "-i", f"{path}/{patch}")
-
-  def chmod(self, mode, *paths):
-    self.sh(f"chmod", mode, *paths)
-
-  def build(self):
-    if "build_style" in self.recipe:
-      get_build_style(self.recipe["build_style"], self).run()
-    elif "build" in self.recipe:
-      self.recipe["build"](self)
-    else:
-      raise InvalidRecipeError("recipe has neither build_style nor build")
-
-  def write_cmake_toolchain(self):
-    if self.SYSROOT is None:
-      return None
-
-    path = os.path.join(self.BUILDDIR, "pbuild-toolchain.cmake")
-
-    with open(path, "w") as file:
-      file.write(f"""\
-set(CMAKE_SYSTEM_NAME Linux)
-set(CMAKE_SYSTEM_PROCESSOR {self.ARCH})
-
-set(CMAKE_C_COMPILER {self.CC})
-set(CMAKE_CXX_COMPILER {self.CXX})
-set(CMAKE_AR {self.AR})
-set(CMAKE_RANLIB {self.RANLIB})
-set(CMAKE_STRIP {self.STRIP})
-
-set(CMAKE_SYSROOT {self.SYSROOT})
-set(CMAKE_FIND_ROOT_PATH {self.SYSROOT})
-
-set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
-set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
-set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
-set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
-
-set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
-""")
-
-    return path
-
-  def install(self):
-    if "build_style" in self.recipe:
-      pass # build already runs the whole lifecycle of the buildstyle
-    elif "install" in self.recipe:
-      self.recipe["install"](self)
-    else:
-      raise InvalidRecipeError("recipe has neither build_style nor build")
-
-  def make_build_environment(self):
-    env = os.environ.copy()
-
-    if self.SYSROOT is None:
-      return env
-
-    if self.SYSROOT_LOOKUP_DIR is not None and not os.path.isdir(self.SYSROOT_LOOKUP_DIR):
-      raise InvalidRecipeError(f"sysroot lookup directory does not exist: {self.SYSROOT_LOOKUP_DIR}")
-
-    if self.TARGET_DIR is not None and not os.path.isdir(self.TARGET_DIR):
-      raise InvalidRecipeError(f"target directory does not exist: {self.TARGET_DIR}")
-
-    if not os.path.isdir(self.SYSROOT):
-      raise InvalidRecipeError(f"sysroot does not exist: {self.SYSROOT}")
-
-    if not os.path.isdir(self.TOOLCHAIN):
-      raise InvalidRecipeError(f"toolchain directory does not exist: {self.TOOLCHAIN}")
-
-    toolbindir = os.path.join(self.TOOLCHAIN, "bin")
-    if not os.path.isdir(toolbindir):
-      raise InvalidRecipeError(f"toolchain bin directory does not exist: {toolbindir}")
-
-    if not os.path.isfile(self.CC):
-      raise InvalidRecipeError(f"cross compiler does not exist: {self.CC}")
-
-    # These can cause host development files to leak into the build.
-    for key in (
-      "CPATH",
-      "C_INCLUDE_PATH",
-      "CPLUS_INCLUDE_PATH",
-      "OBJC_INCLUDE_PATH",
-      "LIBRARY_PATH",
-      "PKG_CONFIG_PATH",
-      "PKG_CONFIG_LIBDIR",
-      "PKG_CONFIG_SYSROOT_DIR",
-    ):
-      env.pop(key, None)
-
-    sysroot = self.SYSROOT
-
-    pkgconfig_dirs = [
-      os.path.join(sysroot, "usr", "lib", "pkgconfig"),
-      os.path.join(sysroot, "usr", "lib64", "pkgconfig"),
-      os.path.join(sysroot, "usr", "lib", self.TRIPLE, "pkgconfig"),
-      os.path.join(sysroot, "usr", "share", "pkgconfig"),
-      os.path.join(sysroot, "lib", "pkgconfig"),
-      os.path.join(sysroot, "lib64", "pkgconfig"),
-    ]
-
-    env.update({
-      "PATH": os.pathsep.join((toolbindir, env.get("PATH", ""))),
-      "CC": self.CC,
-      "CXX": self.CXX,
-      "AR": self.AR,
-      "RANLIB": self.RANLIB,
-      "STRIP": self.STRIP,
-      "NM": self.NM,
-
-      "CPPFLAGS": f"--sysroot={sysroot}",
-      "CFLAGS": f"--sysroot={sysroot} {self.CFLAGS}".strip(),
-      "CXXFLAGS": f"--sysroot={sysroot} {self.CXXFLAGS}".strip(),
-      "LDFLAGS": f"--sysroot={sysroot} {self.LDFLAGS}".strip(),
-
-      # fuck over pkgconfig so it cannot look for path on the host
-      "PKG_CONFIG_PATH": "",
-      "PKG_CONFIG_LIBDIR": os.pathsep.join(pkgconfig_dirs),
-      "PKG_CONFIG_SYSROOT_DIR": sysroot,
-
-      # some makefiles understand it
-      "CROSS_COMPILE": self.TRIPLE + "-",
-
-      # no more setting destdir manually
-      "DESTDIR": self.PKGDIR,
-
-      "CMAKE_TOOLCHAIN_FILE": self.write_cmake_toolchain(),
-    })
-
-    return env
-
 
 def read_recipe(path):
   with open(path, "r") as f:
@@ -495,14 +142,10 @@ def extract_src(ctx, recipe):
 
 
 def main():
-  parser = argparse.ArgumentParser(
-    prog="pbuild",
+  parser = argparse.ArgumentParser(prog="pbuild",
     description="Compiles apk files to be used in Poppycrow Linux repos.",
-    epilog="See more @ https://codeberg.org/Poppycrow-Linux/poppyports",
-  )
-  parser.add_argument(
-    "pkgpath", help="Path of the folder that contains the build recipe."
-  )
+    epilog="See more @ https://codeberg.org/Poppycrow-Linux/poppyports",)
+  parser.add_argument("pkgpath", help="Path of the folder that contains the build recipe.")
   parser.add_argument(
     "-ignoreintegrity",
     "-ii",
@@ -562,115 +205,18 @@ def main():
     help="Appends the ports directory to the path of the recipe to build. Defaults to true, so syntax like pbuild main/linux-stable continues to work.",
     nargs="?",
   )
-  parser.add_argument(
-    "-signkey", help="Signature private key to use for apk signing", nargs="?"
-  )
+  parser.add_argument("-signkey", help="Signature private key to use for apk signing", nargs="?")
   args = parser.parse_args()
-
-  CONFIGFILEPATH = "./pbuild.conf"
-  if args.config:  # parse configfilepath earlier than the rest so we can override it
-    CONFIGFILEPATH = args.config
-
-  # fallback variables
-  appendportsdirtopath = True
-  portsdir = "./recipes"
-  ignoreintegrity = False
-  color = True
-  rebuild = False
-  show_bs_breakdown = True
-  supressnonerrorlogs = False
-  target = None
-  sysroot = None
-  sysroot_path = None
-  toolchain = None
-
-  # TODO: move config reading to a separate function
-
-  cfgparser = configparser.ConfigParser()
-  cfgparser.read(CONFIGFILEPATH)
-  if cfgparser.sections() == []:
-    cfgparser["Build"] = {
-      "AssumeRebuild": "no",
-      "AssumeRedownload": "no",
-      "DefaultBuildPath": "./build",
-      "AssumeRebuild": "no",
-      "AssumeIgnoreIntegrity": "no",
-      "PortsPath": "./recipes",
-      "AppendPortsPathToRecipePath": "yes",
-      "Target": "",
-      "Sysroot": "",
-      "SysrootPath": "",
-      "Toolchain": "",
-    }
-    cfgparser["Display"] = {
-      "Color": "yes",
-      "SupressNonErrorLogs": "no",
-      "BuildStateBreakdown": "yes",
-    }
-    configfile = open(CONFIGFILEPATH, "w")
-
-  if os.path.getsize(CONFIGFILEPATH) == 0:
-    ## TODO: write default config sections if missing. maybe not needed (question Mark), since the defaults are kind of above
-    cfgparser.write(configfile)
-
-  appendportsdirtopath = cfgparser.getboolean("Build", "AppendPortsPathToRecipePath")
-  ignoreintegrity = cfgparser.getboolean("Build", "AssumeIgnoreIntegrity")
-  redownload = cfgparser.getboolean("Build", "AssumeRedownload")
-  builddir = cfgparser["Build"]["DefaultBuildPath"]
-  target = cfgparser.get("Build", "Target", fallback="")
-  sysroot = cfgparser.get("Build", "Sysroot", fallback="")
-  sysroot_path = cfgparser.get("Build", "SysrootPath", fallback="")
-  toolchain = cfgparser.get("Build", "Toolchain", fallback="")
-  color = cfgparser.getboolean("Display", "Color")
-  supressnonerrorlogs = cfgparser.getboolean("Display", "SupressNonErrorLogs")
-  rebuild = cfgparser.getboolean("Build", "AssumeRebuild")
-  show_bs_breakdown = cfgparser.getboolean("Display", "BuildStateBreakdown")
-
-  if args.appendportsdirtopath is not None:
-    appendportsdirtopath = args.appendportsdirtopath
-  if args.pkgpath is not None:
-    pkgpath = args.pkgpath  # ifs added so that cmdline functions cannot override shit when they are not set
-  if args.ignoreintegrity is not None:
-    ignoreintegrity = args.ignoreintegrity
-  if args.builddir is not None:
-    builddir = args.builddir
-  if args.target is not None:
-    target = args.target
-  if args.sysroot is not None:
-    sysroot = args.sysroot
-  if args.sysrootpath is not None:
-    sysroot_path = args.sysrootpath
-  if args.toolchain is not None:
-    toolchain = args.toolchain
-  if args.color is not None:
-    color = args.color
-  if args.fresh is not None:
-    redownload = args.fresh
-  if args.supressnonerrorlogs is not None:
-    supressnonerrorlogs = args.supressnonerrorlogs
-  if args.rebuild is not None:
-    rebuild = args.rebuild
-  if args.buildstatebreakdown is not None:
-    show_bs_breakdown = args.buildstatebreakdown
-
-  if not target:
-    target = None
-  if not sysroot:
-    sysroot = None
-  if not sysroot_path:
-    sysroot_path = None
-  if not toolchain:
-    toolchain = None
-
-  # pkgpath = sys.argv[1]
-  # builddir = sys.argv[2]
-
+  CONFIGFILEPATH = args.config if args.config else "./pbuild.conf"
+  cfg = load_config(CONFIGFILEPATH, args)
+  globals().update(vars(cfg)) # this is a trick to unpack a class into global namespace. it can overwrite variables but I could not give less of a fuck
+  print(cfg)
   # SCRIPT BEGINNING, MOVE THIS SOMEWHERE!!!
   bench = StateBenchmark()
 
   log(None, f"Arguments used: {args}")
 
-  if appendportsdirtopath:
+  if append_portsdir:
     pkgpath_real = f"{portsdir}/{pkgpath}"
   else:
     pkgpath_real = pkgpath
@@ -774,7 +320,7 @@ def main():
 
   bench.change(State.DONE)
   log(Colors.SUCCESS, f"Done! Generated {outpath} ({human_fsize(outpath)})")
-  if show_bs_breakdown:
+  if show_build_breakdown:
     print()
     log(Colors.SUCCESS, f"Build Breakdown")
     print()
