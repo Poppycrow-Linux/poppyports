@@ -6,30 +6,29 @@ class BuildStyle:
   name = None
 
   def __init__(self, context):
+    global ctx
     self.c = context
     self.recipe = context.recipe
 
-  def prepare(self, context):
+  def prepare(self, **kwargs):
     pass ## this is where the preparations happen in special cases. most notably, patching happens there. if you need to patch things later for some reason, call a buildcontext helper.
 
-  def configure(self):
+  def configure(self, **kwargs):
     pass ## this is where the configuration happens
 
-  def build(self):
+  def build(self, **kwargs):
     pass
 
-  def check(self):
+  def check(self, **kwargs):
     pass ## this is where tests are run (if present)
 
-  def install(self):
+  def install(self, **kwargs):
     pass
 
-  def run(self):
-    if "prepare" in self.recipe:
-      self.recipe["prepare"](self.c)
-    else:
-      self.prepare(self.c)
-    self.configure()
-    self.build()
-    self.check()
-    self.install()
+  def run(self, **kwargs):
+    for i in "prepare", "configure", "build", "check", "install":
+      if i in self.recipe:
+        self.recipe[i](self.c)
+      else:
+        i = getattr(self, i)
+        i()
