@@ -83,7 +83,7 @@ c = '{cc}'
 cpp = '{cxx}'
 ar = '{ar}'
 strip = '{strip}'
-pkgconfig = 'pkg-config'
+pkg-config = 'pkgconf'
 
 [properties]
 sys_root = '{sysroot}'
@@ -95,7 +95,7 @@ cpu_family = '{arch}'
 cpu = '{arch}'
 endian = 'little'
 """)
-
+  print("written meson cross file to", path)
   return path
 
 def install_to_cache(pkgdir: str, libs_root: str, target: str, pkgname: str, pkgver: str) -> str:
@@ -118,11 +118,14 @@ def compose_sysroot(base_sysroot: str, libs_root: str, target: str, deps: list[s
             print(f"Package not found in cache: {pkg_path}, but it might not be a library, so we barrel along.")
             continue
         for entry in os.listdir(pkg_path):
+            print(entry)
             src = os.path.join(pkg_path, entry)
             dst = os.path.join(overlay_dir, entry)
             if os.path.isdir(src):
+                print(f"Copying {src} to {dst}")
                 shutil.copytree(src, dst, dirs_exist_ok=True)
             else:
+                print(f"Copying {src} to {dst}")
                 shutil.copy2(src, dst)
 
     # Start from base sysroot
@@ -140,7 +143,9 @@ def compose_sysroot(base_sysroot: str, libs_root: str, target: str, deps: list[s
         dst = os.path.join(composed_dir, entry)
         if os.path.isdir(src):
             shutil.copytree(src, dst, dirs_exist_ok=True)
+            print(f"Copying {src} to {dst}")
         else:
             shutil.copy2(src, dst)
-
+            print(f"Copying {src} to {dst}")
+    while True: pass
     return composed_dir

@@ -64,10 +64,6 @@ def log(clr, *args):
   if (supressnonerrorlogs and (clr in {Colors.SUCCESS, Colors.ERROR, Colors.WARNING})) or not (supressnonerrorlogs):
     print(f"{clr if (clr is not None and color) else ''}I:", *args, Colors.END)
 
-
-def quote(x):
-  return shlex.quote(str(x))
-
 def read_recipe(path):
   with open(path, "r") as f:
     recipe_def = {}
@@ -301,15 +297,16 @@ def main():
           log(Colors.WARNING, f"{portsdir}/main/{j}/recipe.py DOES NOT EXIST!!")
     versions = []
     for i in dependencies:
-      if os.path.exists("portsdir" + f"/main/{i}/recipe.py"):
+      if os.path.exists(f"{portsdir}/main/{i}/recipe.py"):
         k = read_recipe(portsdir + f"/main/{i}/recipe.py")
         versions.append(k["pkgver"])
-
+    pkgdeps = [f"{pkg}-{ver}" for pkg, ver in zip(dependencies, versions)]
+    print(cfg.libs_root, pkgdeps, dependencies, versions)
     composed = compose_sysroot(
           base_sysroot = ctx.SYSROOT,
           libs_root = cfg.libs_root,
           target = ctx.TARGET,
-          deps=[f"{pkg}-{ver}" for pkg, ver in zip(dependencies, versions)],
+          deps=pkgdeps
       )
     ctx.SYSROOT = composed
     log(Colors.SUCCESS, f"Made sysroot: {composed}")
