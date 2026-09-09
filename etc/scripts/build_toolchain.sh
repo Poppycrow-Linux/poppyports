@@ -443,6 +443,36 @@ CFLAGS="${CFLAGS:-} ${TARGET_CFLAGS[*]}" \
 
 make
 make DESTDIR="$SYSROOT" install
+make_usr_alias() {
+  local name="$1"
+  local usr_path="$SYSROOT/usr/$name"
+  local root_path="$SYSROOT/$name"
+
+  [[ -e "$usr_path" || -L "$usr_path" ]] || return 0
+
+  if [[ -L "$usr_path" ]]; then
+    info "already a symlink: /usr/$name"
+    return 0
+  fi
+
+  mkdir -p "$root_path"
+
+  # Preserve anything installed there before replacing the directory.
+  if [[ -d "$usr_path" ]]; then
+    cp -a "$usr_path/." "$root_path/"
+    rm -rf "$usr_path"
+  else
+    die "cannot convert /usr/$name: it is not a directory or symlink"
+  fi
+
+  ln -s "../$name" "$usr_path"
+  info "created sysroot symlink: /usr/$name -> ../$name"
+}
+
+make_usr_alias bin
+make_usr_alias lib
+make_usr_alias lib64
+make_usr_alias sbin
 
 unset CC
 unset CXX
