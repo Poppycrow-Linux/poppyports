@@ -12,33 +12,49 @@ sbu = 1.0
 
 sources = [f"https://ftp.gnu.org/gnu/ncurses/{pkgname}-{pkgver}.tar.gz"]
 sha256sum = ["355b4cbbed880b0381a04c46617b7656e362585d52e9cf84a67e2009b749ff11"]
-depends = ["libc"]
 
-def build(c):
-  c.SRCDIR = c.SRCDIR + f"/{pkgname}-{pkgver}"
-  c.sh("./configure","--enable-widec","--with-shared","--without-normal","--without-debug","--with-termlib", "--with-cxx-shared", "--with-cxx-binding", "--enable-pc-files", "--disable-stripping", "--enable-symlinks", "--with-versioned-syms")
+depends = ["libc"]
+build_style = "gnu_configure"
+build_wrksrc = f"{pkgname}-{pkgver}"
+make_check = False
+
+configure_args = [
+    "--enable-widec",
+    "--with-shared",
+    "--with-manpage-symlinks",
+    "--with-manpage-format=normal",
+    "--without-debug",
+    "--with-termlib",
+    "--with-cxx-shared",
+    "--with-cxx-binding",
+    "--enable-pc-files",
+    "--disable-stripping",
+    "--enable-symlinks",
+    "--with-pkg-config-libdir=/usr/lib/pkgconfig",
+    "--with-versioned-syms",
+]
+
 
 def install(c):
-  c.sh("make", "install", f"DESTDIR={c.PKGDIR}", f"-j{c.NPROC}") # should be also symlinked to /lib64
-  print("Time for symlink jank! if anything errors out, nuke the ncurses build directory!")
-  oldsrcdir = c.SRCDIR
-  c.SRCDIR = c.PKGDIR + "/usr/lib" # hack because sh doesnt allow to set cwd
-  #c.sh("ln","-s","libtinfow.so.6.6","libtinfo.so.6")
-  #c.sh("ln","-s","libtinfow.so.6.6","libtinfo.so")
-  #c.sh("ln","-s","libtinfow.so.6.6","libtinfo.so.6.6")
+    c.sh(
+        "make",
+        "install",
+        f"DESTDIR={c.PKGDIR}",
+        f"-j{c.NPROC}",
+        cwd=c.workdir(),
+    )
 
-  c.SRCDIR=c.PKGDIR #SET IT BACK
-  ## they taught me this ncurses trick at the alpine linux APKBUILDS school
-  for lib in ["ncurses", "ncurses++", "form", "panel", "menu"]:
-    c.sh(f"ln -s {lib}w.pc {c.PKGDIR}/usr/lib/pkgconfig/{lib}.pc")
-    c.sh(f"ln -s lib{lib}w.a {c.PKGDIR}/usr/lib/lib{lib}.a")
-    c.sh(f"ln -s lib{lib}w.so {c.PKGDIR}/usr/lib/lib{lib}.so")
+    # Symlink jank
+    libdir = f"{c.PKGDIR}/usr/lib"
+    pkgconfig_dir = f"{libdir}/pkgconfig"
+    for lib in ["ncurses", "ncurses++", "form", "panel", "menu"]:
+      c.lnk(f"{pkgconfig_dir}/{lib}w.pc", f"{pkgconfig_dir}/{lib}.pc", relative=True)
+      c.lnk(f"{libdir}/lib{lib}w.a", f"{libdir}/lib{lib}.a", relative=True)
+      c.lnk(f"{libdir}/lib{lib}w.so", f"{libdir}/lib{lib}.so", relative=True)
 
-  # and one more for the fans!
+    for lib in ["curses", "tic", "tinfo"]:
+      c.lnk(f"{libdir}/libncurses.a", f"{libdir}/lib{lib}.a", relative=True)
+      c.lnk(f"{libdir}/libncurses.so", f"{libdir}/lib{lib}.so", relative=True)
+      c.lnk(f"{pkgconfig_dir}/ncurses.pc", f"{pkgconfig_dir}/{lib}.pc", relative=True)
 
-  for lib in ["curses", "tic", "tinfo"]:
-    c.sh(f"ln -s libncurses.a {c.PKGDIR}/usr/lib/lib{lib}.a")
-    c.sh(f"ln -s libncurses.so {c.PKGDIR}/usr/lib/lib{lib}.so")
-    c.sh(f"ln -s ncurses.pc {c.PKGDIR}/usr/lib/pkgconfig/{lib}.pc")
-
-  c.sh(f"ln -s libncursesw.so {c.PKGDIR}/usr/lib/libcursesw.so")
+    c.lnk(f"{libdir}/libncursesw.so", f"{libdir}/libcursesw.so", relative=True)
