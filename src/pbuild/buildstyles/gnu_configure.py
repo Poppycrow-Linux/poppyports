@@ -4,18 +4,21 @@ from .base import BuildStyle
 class GnuConfigureStyle(BuildStyle):
   name = "gnu_configure"
 
+
   def configure(self):
-    for command in self.recipe.get("configure_gen", []): # sometimes you have to work for the configure to appear. like those fuckass autogen.sh files.
+    self.configure_command = self.c.recipe.get("configure_command", "configure")
+    for command in self.c.recipe.get("configure_gen", []): # sometimes you have to work for the configure to appear. like those fuckass autogen.sh files.
       self.c.sh(command, cwd=self.c.workdir())
 
     args = [
-      "./configure",
+      f"./{self.configure_command}",
       f"--build={self.c.TRIPLE}",
       f"--host={self.c.HOST_TRIPLE}",
       "--prefix=/usr",
     ]
 
-    args.extend(self.recipe.get("configure_args", [])) #take 5 guesses what it does
+    args.extend(self.c.recipe.get("configure_args", [])) # we use the recipe derived from context and not the global
+                                                         # because otherwise prepare() can't update the args
     self.c.sh(*args, cwd=self.c.workdir())
 
   def build(self):
