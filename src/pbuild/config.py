@@ -14,6 +14,7 @@ class Config:
     sysroot: str | None = None
     sysroot_path: str | None = None
     toolchain: str | None = None
+    libs_root: str | None = builddir + "/libs/"
 
     ignore_integrity: bool = False
     redownload: bool = False
@@ -26,10 +27,12 @@ class Config:
     # things below are cli only options
     sign_key: str | None = None
     pkgpath: str | None = None
+    lib: bool = False
 
 
 FIELD_TO_SECTION = {
     "portsdir": "Build",
+    "libs_root": "Build",
     "append_portsdir": "Build",
     "default_builddir": "Build",
     "target": "Build",
@@ -43,7 +46,8 @@ FIELD_TO_SECTION = {
     "suppress_non_error_logs": "Display",
     "show_build_breakdown": "Display",
     "sign_key": None,
-    "pkgpath": None
+    "pkgpath": None,
+    "lib": None
 }
 
 

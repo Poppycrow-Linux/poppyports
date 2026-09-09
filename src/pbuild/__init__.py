@@ -1,6 +1,7 @@
 # TODO: organize!!
 # # this is __init__ the module entry point. main() is defined here.
 import argparse
+import itertools
 import configparser
 import hashlib
 import os
@@ -17,6 +18,7 @@ from dataclasses import dataclass, field
 from .buildcontext import BuildContext
 from .logutil import State, StateBenchmark, human_fsize, Colors, InvalidRecipeError, InvalidChecksumError
 from .config import load_config
+from .crossutils import install_to_cache, compose_sysroot
 
 def log(clr, *args):
   if (supressnonerrorlogs and (clr in important_colors)) or not (supressnonerrorlogs):
@@ -189,6 +191,10 @@ def main():
     help="Supress logs that aren't warnings, errors, or completion messages",
     nargs="?",
   )
+  parser.add_argument("-lib", "-install-as-lib", action=OptionalBoolAction,
+    help="Caches the contents of PKGDIR into /{BUILDDIR}}/{TARGET}/{pkgname}, which is then used for overlaying libs on top of sysroot",
+    nargs="?",
+  )
   parser.add_argument(
     "builddir", help="The directory to build the recipe in.", nargs="?"
   )
@@ -206,11 +212,11 @@ def main():
     nargs="?",
   )
   parser.add_argument("-signkey", help="Signature private key to use for apk signing", nargs="?")
+  parser.add_argument("-libs-root", help="Path to look for cross-compiled libraries in.", nargs="?")
   args = parser.parse_args()
   CONFIGFILEPATH = args.config if args.config else "./pbuild.conf"
   cfg = load_config(CONFIGFILEPATH, args)
   globals().update(vars(cfg)) # this is a trick to unpack a class into global namespace. it can overwrite variables but I could not give less of a fuck
-  print(cfg)
   # SCRIPT BEGINNING, MOVE THIS SOMEWHERE!!!
   bench = StateBenchmark()
 
@@ -224,6 +230,7 @@ def main():
   recipe = read_recipe(f"{pkgpath_real}/recipe.py")
 
   ctx = BuildContext(os.path.abspath(builddir), os.path.abspath(pkgpath_real), recipe, sysroot, sysroot_path, toolchain, target)
+  ctx.LIBS_ROOT = libs_root
   log(None, f"NPROC: {ctx.NPROC}")
 
   if ctx.SYSROOT is not None:
@@ -280,11 +287,41 @@ def main():
     extract_src(ctx, recipe)
 
   os.makedirs(ctx.PKGDIR, exist_ok=True)
+
+
+  if ctx.SYSROOT and recipe["depends"]:
+    log(Colors.SH_COMMAND, "Making a sysroot with needed libraries!")
+    dependencies = []
+    for j in recipe["depends"]: dependencies.append(j)
+    if "makedepends" in recipe.keys():
+      for j in recipe["makedepends"]:
+        if os.path.exists("portsdir" + f"/main/{j}/recipe.py"):
+          dependencies.append(j)
+        else:
+          log(Colors.WARNING, f"{portsdir}/main/{j}/recipe.py DOES NOT EXIST!!")
+    versions = []
+    for i in dependencies:
+      if os.path.exists("portsdir" + f"/main/{i}/recipe.py"):
+        k = read_recipe(portsdir + f"/main/{i}/recipe.py")
+        versions.append(k["pkgver"])
+
+    composed = compose_sysroot(
+          base_sysroot = ctx.SYSROOT,
+          libs_root = cfg.libs_root,
+          target = ctx.TARGET,
+          deps=[f"{pkg}-{ver}" for pkg, ver in zip(dependencies, versions)],
+      )
+    ctx.SYSROOT = composed
+    log(Colors.SUCCESS, f"Made sysroot: {composed}")
+    ctx._composed_sysroot = composed  # for later cleanup
   log(None, "Building...")
   bench.change(State.BUILD)
   ctx.build()
   bench.change(State.INSTALL)
   ctx.install()
+  if lib:
+    log(Colors.SH_COMMAND, f"Installing library to {ctx.LIBS_ROOT}")
+    install_to_cache(ctx.PKGDIR, ctx.LIBS_ROOT, ctx.TARGET, recipe["pkgname"], recipe["pkgver"])
 
 
   # make apk
@@ -325,3 +362,6 @@ def main():
     log(Colors.SUCCESS, f"Build Breakdown")
     print()
     print(bench.build_breakdown())
+    if hasattr(ctx, "_composed_sysroot") and ctx._composed_sysroot is not None:
+      log(Colors.SH_COMMAND, f"Removing {ctx._composed_sysroot}")
+      shutil.rmtree(ctx._composed_sysroot, ignore_errors=True)
