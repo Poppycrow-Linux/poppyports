@@ -12,8 +12,8 @@ class MesonStyle(BuildStyle):
       builddir,
       self.c.workdir()
     ]
-
-    cross_file = self.c.write_meson_cross_file()
+    # sysroot, builddir, cc, cxx, ar, strip, arch
+    cross_file = write_meson_cross_file(self.c.SYSROOT, self.c.BUILDDIR, self.c.CC, self.c.CXX, self.c.AR, self.c.STRIP, self.c.ARCH)
     if cross_file is not None:
       args.extend(["--cross-file", cross_file]) ## meson is an IDIOT and needs a cross file
 
