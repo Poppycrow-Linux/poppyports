@@ -9,7 +9,7 @@ class BuildStyle:
     self.c = context
     self.recipe = context.recipe
 
-  def prepare(self):
+  def prepare(self, context):
     pass ## this is where the preparations happen in special cases. most notably, patching happens there. if you need to patch things later for some reason, call a buildcontext helper.
 
   def configure(self):
@@ -25,7 +25,10 @@ class BuildStyle:
     pass
 
   def run(self):
-    self.prepare()
+    if "prepare" in self.recipe:
+      self.recipe["prepare"](self.c)
+    else:
+      self.prepare(self.c)
     self.configure()
     self.build()
     self.check()
