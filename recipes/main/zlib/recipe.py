@@ -6,15 +6,12 @@ url = "https://zlib.net/"
 arch = "x86_64"
 license = "zlib"
 maintainer = "samxyz30"
+recipever = 1
 
-sources = [f"https://zlib.net/zlib-{pkgver}.tar.gz"]
+build_wrksrc = f"{pkgname}-{pkgver}"
+build_style = "gnu_configure"
+sources = [f"https://zlib.net/{pkgname}-{pkgver}.tar.gz"]
 sha256sum = ["bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16"]
 depends = ["libc"]
 
-def build(c):
-  c.SRCDIR += f"/zlib-{pkgver}"
-  c.sh("./configure", "--prefix=/usr")
-  c.sh("make", f"-j{c.NPROC}")
-
-def install(c):
-  c.sh("make", "install", f"DESTDIR={c.PKGDIR}")
+make_check = False
