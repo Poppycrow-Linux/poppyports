@@ -311,6 +311,7 @@ def main():
     ctx.SYSROOT = composed
     log(Colors.SUCCESS, f"Made sysroot: {composed}")
     ctx._composed_sysroot = composed  # for later cleanup
+    ctx.env = ctx.make_build_environment() # rebuild env to feature a brand new sysroot
   log(None, "Building...")
   bench.change(State.BUILD)
   ctx.build()

@@ -123,7 +123,7 @@ def compose_sysroot(base_sysroot: str, libs_root: str, target: str, deps: list[s
             dst = os.path.join(overlay_dir, entry)
             if os.path.isdir(src):
                 print(f"Copying {src} to {dst}")
-                shutil.copytree(src, dst, dirs_exist_ok=True)
+                shutil.copytree(src, dst, dirs_exist_ok=True, symlinks=True)
             else:
                 print(f"Copying {src} to {dst}")
                 shutil.copy2(src, dst)
@@ -133,7 +133,7 @@ def compose_sysroot(base_sysroot: str, libs_root: str, target: str, deps: list[s
         src = os.path.join(base_sysroot, entry)
         dst = os.path.join(composed_dir, entry)
         if os.path.isdir(src):
-            shutil.copytree(src, dst, dirs_exist_ok=True)
+            shutil.copytree(src, dst, dirs_exist_ok=True, symlinks=True)
         else:
             shutil.copy2(src, dst)
 
@@ -142,10 +142,10 @@ def compose_sysroot(base_sysroot: str, libs_root: str, target: str, deps: list[s
         src = os.path.join(overlay_dir, entry)
         dst = os.path.join(composed_dir, entry)
         if os.path.isdir(src):
-            shutil.copytree(src, dst, dirs_exist_ok=True)
+            shutil.copytree(src, dst, dirs_exist_ok=True, symlinks=True)
             print(f"Copying {src} to {dst}")
         else:
             shutil.copy2(src, dst)
             print(f"Copying {src} to {dst}")
-    while True: pass
+    # while True: pass
     return composed_dir
