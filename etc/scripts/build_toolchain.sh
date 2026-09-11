@@ -336,9 +336,9 @@ GCC_SOURCE="$SOURCES/gcc"
 GLIBC_SOURCE="$SOURCES/glibc"
 HEADERS_SOURCE="$SOURCES/linux"
 
-download "https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VERSION}.tar.xz" "$BINUTILS_ARCHIVE" "$BINUTILS_SHA256"
-download "https://ftp.gnu.org/gnu/gcc/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.xz" "$GCC_ARCHIVE" "$GCC_SHA256"
-download "https://ftp.gnu.org/gnu/glibc/glibc-${GLIBC_VERSION}.tar.xz" "$GLIBC_ARCHIVE" "$GLIBC_SHA256"
+download "http://ftp-stud.fht-esslingen.de/pub/Mirrors/ftp.gnu.org/binutils/binutils-${BINUTILS_VERSION}.tar.xz" "$BINUTILS_ARCHIVE" "$BINUTILS_SHA256"
+download "http://ftp-stud.fht-esslingen.de/pub/Mirrors/ftp.gnu.org/gcc/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.xz" "$GCC_ARCHIVE" "$GCC_SHA256"
+download "http://ftp-stud.fht-esslingen.de/pub/Mirrors/ftp.gnu.org/glibc/glibc-${GLIBC_VERSION}.tar.xz" "$GLIBC_ARCHIVE" "$GLIBC_SHA256"
 download "https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-${HEADERS_VERSION}.tar.xz" "$HEADERS_ARCHIVE" "$HEADERS_SHA256"
 
 extract "$BINUTILS_ARCHIVE" "$BINUTILS_SOURCE"
