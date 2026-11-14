@@ -34,7 +34,7 @@ FIELD_TO_SECTION = {
     "portsdir": "Build",
     "libs_root": "Build",
     "append_portsdir": "Build",
-    "default_builddir": "Build",
+    "builddir": "Build",
     "target": "Build",
     "sysroot": "Build",
     "sysroot_path": "Build",
