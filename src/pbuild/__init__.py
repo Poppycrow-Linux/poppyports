@@ -225,7 +225,7 @@ def main() -> None:
 
   recipe = read_recipe(f"{pkgpath_real}/recipe.py")
 
-  ctx = BuildContext(os.path.abspath(builddir), os.path.abspath(pkgpath_real), recipe, sysroot, sysroot_path, toolchain, target)
+  ctx = BuildContext(os.path.abspath(builddir), os.path.abspath(pkgpath_real), recipe, sysroot, toolchain, target)
   ctx.LIBS_ROOT = libs_root
   log(None, f"NPROC: {ctx.NPROC}")
 
