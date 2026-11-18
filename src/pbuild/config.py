@@ -12,7 +12,6 @@ class Config:
     builddir: str = "./build"
     target: str | None = None
     sysroot: str | None = None
-    sysroot_path: str | None = None
     toolchain: str | None = None
     libs_root: str | None = builddir + "/libs/"
 

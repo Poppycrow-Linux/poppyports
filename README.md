@@ -103,7 +103,7 @@ In the future, this entire process should be automated.
 
 Due to the way pbuild works, you are effectively forced to do so. Don't worry, it's relatively straightforward to set up.
 1. Make a folder that will house all of your targets. For the purposes of this example, it will be ./sysroots (or poppyports/sysroots if we are being pedantic)
-2. Edit pbuld.conf and add your desired sysroot lookup dir here like this: `sysroot = ./sysroots`. The difference between `sysroot` and `sysroot_path` is that `sysrootpath` is something you should NEVER use, while `sysroot` is used for lookup. The whole thing is a mess and I need to change it someday. If pbuild.conf does not exist, attempt to build something, even if it errors out. Pbuild should then generate a pbuild.conf that you will be able to edit.
+2. Edit pbuld.conf and add your desired sysroot lookup dir here like this: `sysroot = ./sysroots`. `sysroot` is used for lookup. If pbuild.conf does not exist, attempt to build something, even if it errors out. Pbuild should then generate a pbuild.conf that you will be able to edit.
 3. Run `ARCH=<insert architecture> pbuld/etc/scripts/build_toolchain.sh`. It will fetch and build GCC and binutils and will produce `pbuld/etc/scripts/build/ccstrap`. 
 4. Grab `pbuld/etc/scripts/build/ccstrap/toolchain` and `pbuld/etc/scripts/build/ccstrap/sysroot` and place them in `poppyports/sysroots/<ARCH>-<LIBC>`, or whatever lookup directory for the sysroot you configured.
 5. Then you will be able to specify a cross-compilation target via `pbuild /path/to/recipe -target <ARCH>-<LIBC>`
