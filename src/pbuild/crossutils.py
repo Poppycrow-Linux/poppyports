@@ -10,10 +10,10 @@ def target_triple(arch, libc="glibc", vendor="crow"):
   else: libc_suffix = libc # it works for musl and I do not care enough for others
   if arch not in idiot_arches:
      return f"{arch}-{vendor}-linux-{libc_suffix}"
-  if arch == "armv7" or "gnueabihf":
+  if arch in ["armv7", "gnueabihf"]:
     libc_suffix += "eabihf" # works for musl and glibc.
     return f"arm-{vendor}-linux-{libc_suffix}"
-  if arch == "ppc64le" or "powerpc64le":
+  if arch in ["ppc64le", "powerpc64le"]:
     return f"powerpc64le-{vendor}-linux-{libc_suffix}"
 
   raise ValueError(f"unsupported target architecture: {arch}")
