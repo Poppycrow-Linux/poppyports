@@ -53,7 +53,7 @@ class BuildContext:  # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
     self.TARGET_DIR = None # this is the sysroot and toolchain dir so it would refer to something like /sysroots/aarch64-glibc
     self.SYSROOT = None
     self.TOOLCHAIN = os.path.abspath(toolchain) if toolchain else None
-    self.HOST_TRIPLE = None
+    self.BUILDER_TRIPLE = None
     self.TRIPLE = None
     self.CC = "cc"
     self.CXX = "c++"
@@ -64,7 +64,7 @@ class BuildContext:  # https://wiki.alpinelinux.org/wiki/APKBUILD_Reference
 
     for i in "gcc", "clang":
       if shutil.which(i) != None:
-        self.HOST_TRIPLE = subprocess.check_output([i, "-dumpmachine"], text=True).strip()
+        self.BUILDER_TRIPLE = subprocess.check_output([i, "-dumpmachine"], text=True).strip()
 
     if self.SYSROOT is None and self.SYSROOT_LOOKUP_DIR is not None:
       self.TARGET_DIR = os.path.join(self.SYSROOT_LOOKUP_DIR, self.TARGET)

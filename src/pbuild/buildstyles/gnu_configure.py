@@ -14,7 +14,7 @@ class GnuConfigureStyle(BuildStyle):
     args = [f"./{self.configure_command}", "--prefix=/usr"]
 
     if self.add_cross_params:
-      args += [f"--build={self.c.TRIPLE}", f"--host={self.c.HOST_TRIPLE}"]
+      args += [f"--build={self.c.BUILDER_TRIPLE}", f"--host={self.c.TRIPLE}"]
 
 
 
