@@ -21,12 +21,9 @@ class Colors:
 
 important_colors = [Colors.SUCCESS, Colors.ERROR, Colors.WARNING]
 
-# THIS IS TEMPORARY someone PLEASE find a way to make colorless and cleaner logs work without reading the config and args 9 billion times
-def log(clr, *args):
-    print(f"{clr if (clr is not None) else ''}I:", *args, Colors.END)
 
-# not used due to config parameter complications
-def log_new(clr, supressnonerrorlogs, color, *args):
+
+def log(clr, *args):
   if (supressnonerrorlogs and (clr in important_colors)) or not (supressnonerrorlogs):
     print(f"{clr if (clr is not None and color) else ''}I:", *args, Colors.END)
 

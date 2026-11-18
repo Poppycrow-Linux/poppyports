@@ -16,20 +16,15 @@ from dataclasses import dataclass, field
 
 
 from .buildcontext import BuildContext
-from .logutil import State, StateBenchmark, human_fsize, Colors, InvalidRecipeError, InvalidChecksumError
+from .logutil import State, StateBenchmark, human_fsize, Colors, InvalidRecipeError, InvalidChecksumError, log
 from .config import load_config
 from .crossutils import install_to_cache, compose_sysroot, teardown_overlay, compose_sysroot_overlay
 
-def log(clr, *args):
-  if (supressnonerrorlogs and (clr in important_colors)) or not (supressnonerrorlogs):
-    print(f"{clr if (clr is not None and color) else ''}I:", *args, Colors.END)
-
+logutil.supressnonerrorlogs = False
+logutil.color = False
 supressnonerrorlogs = False  # set as a global variable so the log function would Know
 color = True  # same as above
 
-def log(clr, *args):
-  if (supressnonerrorlogs and (clr in important_colors)) or not (supressnonerrorlogs):
-    print(f"{clr if (clr is not None and color) else ''}I:", *args, Colors.END)
 
 # exceptions
 
@@ -58,11 +53,6 @@ class OptionalBoolAction(argparse.Action):
       setattr(namespace, self.dest, False)
     else:
       raise argparse.ArgumentTypeError(f"invalid boolean value for {option_string}: {values}")
-
-
-def log(clr, *args):
-  if (supressnonerrorlogs and (clr in {Colors.SUCCESS, Colors.ERROR, Colors.WARNING})) or not (supressnonerrorlogs):
-    print(f"{clr if (clr is not None and color) else ''}I:", *args, Colors.END)
 
 def read_recipe(path):
   with open(path, "r") as f:
@@ -213,6 +203,8 @@ def main() -> None:
   CONFIGFILEPATH = args.config if args.config else "./pbuild.conf"
   cfg = load_config(CONFIGFILEPATH, args)
   globals().update(vars(cfg)) # this is a trick to unpack a class into global namespace. it can overwrite variables but I could not give less of a fuck
+  logutil.supressnonerrorlogs = supressnonerrorlogs
+  logutil.color = color
   # SCRIPT BEGINNING, MOVE THIS SOMEWHERE!!!
   bench = StateBenchmark()
 
