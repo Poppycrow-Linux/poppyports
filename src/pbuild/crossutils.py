@@ -1,6 +1,8 @@
 import os
 import tempfile
 import shutil
+import subprocess
+from .logutil import Colors, InvalidRecipeError, log
 
 def target_triple(arch, libc="glibc", vendor="crow"):
   idiot_arches = ["armv7", "gnueabihf", "ppc64le", 'powerpc64le']
@@ -30,6 +32,9 @@ def split_target(target):
 
   return arch, libc
 
+## TODO: the kernel arches among with other things should be declared in some sort of target config.
+## see how chimera does it: https://github.com/chimera-linux/cports/tree/master/etc/build_profiles
+## this could probably also be improved by moving the kernel arches and whatnot here
 KERNEL_ARCHES = {
   "x86_64": "x86",
   "aarch64": "arm64",
@@ -149,3 +154,67 @@ def compose_sysroot(base_sysroot: str, libs_root: str, target: str, deps: list[s
             print(f"Copying {src} to {dst}")
     # while True: pass
     return composed_dir
+
+import tempfile
+
+def _try_kernel_overlay(lowers, upper, work, merged):
+    opts = "lowerdir=" + ":".join(lowers) + f",upperdir={upper},workdir={work}"
+    r = subprocess.run(
+        ["mount", "-t", "overlay", "overlay", "-o", opts, merged],
+        capture_output=True,
+    )
+    return r.returncode == 0
+
+
+def _try_fuse_overlay(lowers, upper, work, merged):
+    # requires the `fuse-overlayfs` binary on PATH (or the python wrapper)
+    cmd = ["fuse-overlayfs", "-o",
+           "lowerdir=" + ":".join(lowers) + f",upperdir={upper},workdir={work}",
+           merged]
+    try:
+        r = subprocess.run(cmd, capture_output=True)
+        return r.returncode == 0
+    except FileNotFoundError:
+        return False
+
+
+def compose_sysroot_overlay(base_sysroot, libs_root, target, deps):
+    lowers = []
+    for dep in deps:
+        p = f"{libs_root}/{target}/{dep}"
+        if os.path.isdir(p):
+            lowers.append(p)
+        else:
+            log(Colors.WARNING, f"missing lib dir: {p}")
+    lowers.append(base_sysroot)
+
+    tmp = tempfile.mkdtemp(prefix="pbuild-overlay-")
+    upper = os.path.join(tmp, "upper")
+    work  = os.path.join(tmp, "work")
+    merged = os.path.join(tmp, "merged")
+    for d in (upper, work, merged):
+        os.makedirs(d)
+
+    if _try_kernel_overlay(lowers, upper, work, merged):
+        backend = "kernel-overlayfs"
+    elif _try_fuse_overlay(lowers, upper, work, merged):
+        backend = "fuse-overlayfs"
+    else:
+        shutil.rmtree(tmp, ignore_errors=True)
+        return None  # caller falls back to compose_sysroot()
+
+    log(Colors.SUCCESS, f"composed sysroot via {backend}: {merged}")
+    return {
+        "merged": merged,
+        "tmp": tmp,
+        "backend": backend,
+    }
+
+
+def teardown_overlay(state):
+    if not state:
+        return
+    log(Colors.SH_COMMAND, f"Tearing down overlay {state["tmp"]}")
+    subprocess.run(["umount", "-l", state["merged"]],
+                   capture_output=True)
+    shutil.rmtree(state["tmp"], ignore_errors=True)

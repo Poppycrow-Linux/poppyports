@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from .buildcontext import BuildContext
 from .logutil import State, StateBenchmark, human_fsize, Colors, InvalidRecipeError, InvalidChecksumError
 from .config import load_config
-from .crossutils import install_to_cache, compose_sysroot
+from .crossutils import install_to_cache, compose_sysroot, teardown_overlay, compose_sysroot_overlay
 
 def log(clr, *args):
   if (supressnonerrorlogs and (clr in important_colors)) or not (supressnonerrorlogs):
@@ -130,7 +130,7 @@ def check_downloaded(ctx, recipe):
     return fails
 
 
-def extract_src(ctx, recipe):
+def extract_src(ctx, recipe) -> None:
   for url in recipe["sources"]:
     # TODO: skip extraction if already extracted (?)
     filename = url.split("/")[-1]
@@ -139,7 +139,7 @@ def extract_src(ctx, recipe):
       f.extractall(ctx.SRCDIR)
 
 
-def main():
+def main() -> None:
   parser = argparse.ArgumentParser(prog="pbuild",
     description="Compiles apk files to be used in Poppycrow Linux repos.",
     epilog="See more @ https://codeberg.org/Poppycrow-Linux/poppyports",)
@@ -153,9 +153,9 @@ def main():
     nargs="?",
   )
   parser.add_argument(
-    "-fresh",
-    "-new",
     "-redownload",
+    "-new",
+    "-fresh",
     action=OptionalBoolAction,
     help="Redownload files even if they are already present and pass the integrity checks.",
     nargs="?",
@@ -285,41 +285,61 @@ def main():
   os.makedirs(ctx.PKGDIR, exist_ok=True)
 
 
-  if ctx.SYSROOT and recipe["depends"]:
-    log(Colors.SH_COMMAND, "Making a sysroot with needed libraries!")
-    dependencies = []
-    for j in recipe["depends"]: dependencies.append(j)
-    if "makedepends" in recipe.keys():
-      for j in recipe["makedepends"]:
-        if os.path.exists("portsdir" + f"/main/{j}/recipe.py"):
-          dependencies.append(j)
-        else:
-          log(Colors.WARNING, f"{portsdir}/main/{j}/recipe.py DOES NOT EXIST!!")
-    versions = []
-    for i in dependencies:
-      if os.path.exists(f"{portsdir}/main/{i}/recipe.py"):
-        k = read_recipe(portsdir + f"/main/{i}/recipe.py")
-        versions.append(k["pkgver"])
-    pkgdeps = [f"{pkg}-{ver}" for pkg, ver in zip(dependencies, versions)]
-    print(cfg.libs_root, pkgdeps, dependencies, versions)
-    composed = compose_sysroot(
-          base_sysroot = ctx.SYSROOT,
-          libs_root = cfg.libs_root,
-          target = ctx.TARGET,
-          deps=pkgdeps
+  if ctx.SYSROOT and ("depends" in recipe or "makedepends" in recipe):
+      log(Colors.SH_COMMAND, "Making a sysroot with needed libraries!")
+      dependencies = list(recipe.get("depends", []))
+      for j in recipe.get("makedepends", []):
+          rp = f"{portsdir}/main/{j}/recipe.py"
+          if os.path.exists(rp):
+              dependencies.append(j)
+          else:
+              log(Colors.WARNING, f"{rp} DOES NOT EXIST!!")
+
+      pkgdeps = []
+      for pkg in dependencies:
+          rp = f"{portsdir}/main/{pkg}/recipe.py"
+          if not os.path.exists(rp):
+              log(Colors.WARNING, f"no recipe for {pkg}, skipping")
+              continue
+          ver = read_recipe(rp)["pkgver"]
+          expected = f"{cfg.libs_root}/{ctx.TARGET}/{pkg}-{ver}"
+          if not os.path.isdir(expected):
+              log(Colors.WARNING, f"expected lib missing: {expected}")
+          pkgdeps.append(f"{pkg}-{ver}")
+
+      overlay = compose_sysroot_overlay(
+          base_sysroot=ctx.SYSROOT,
+          libs_root=cfg.libs_root,
+          target=ctx.TARGET,
+          deps=pkgdeps,
       )
-    ctx.SYSROOT = composed
-    log(Colors.SUCCESS, f"Made sysroot: {composed}")
-    ctx._composed_sysroot = composed  # for later cleanup
-    ctx.env = ctx.make_build_environment() # rebuild env to feature a brand new sysroot
+      if overlay is not None:
+          ctx.SYSROOT = overlay["merged"]
+          ctx._overlay = overlay
+          log(Colors.SUCCESS, f"Made sysroot: {ctx.SYSROOT}")
+      else:
+          log(Colors.WARNING, "overlayfs unavailable, falling back to copy")
+          composed = compose_sysroot(base_sysroot=ctx.SYSROOT,
+              libs_root=cfg.libs_root,
+              target=ctx.TARGET,
+              deps=pkgdeps,
+          )
+          ctx.SYSROOT = composed
+          ctx._composed_sysroot = composed
+      ctx.env = ctx.make_build_environment()
   log(None, "Building...")
   bench.change(State.BUILD)
-  ctx.build()
-  bench.change(State.INSTALL)
-  ctx.install()
-  if lib:
-    log(Colors.SH_COMMAND, f"Installing library to {ctx.LIBS_ROOT}")
-    install_to_cache(ctx.PKGDIR, ctx.LIBS_ROOT, ctx.TARGET, recipe["pkgname"], recipe["pkgver"])
+  try:
+    ctx.build()
+    bench.change(State.INSTALL)
+    ctx.install()
+    if lib:
+      log(Colors.SH_COMMAND, f"Installing library to {ctx.LIBS_ROOT}")
+      install_to_cache(ctx.PKGDIR, ctx.LIBS_ROOT, ctx.TARGET, recipe["pkgname"], recipe["pkgver"])
+  finally:
+    teardown_overlay(getattr(ctx, "_overlay", None))
+    if getattr(ctx, "_composed_sysroot", None):
+      shutil.rmtree(ctx._composed_sysroot, ignore_errors=True)
 
 
   # make apk
