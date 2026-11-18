@@ -54,6 +54,9 @@ extract() {
     return
   fi
 
+  # Sanity-check the archive before trusting a partial download.
+  tar -tf "$archive" >/dev/null 2>&1 || die "archive is corrupt or incomplete: $archive"
+
   rm -rf "$destination"
   mkdir -p "$destination"
 
@@ -151,14 +154,11 @@ default_slibdir() {
   local arch="$1"
 
   case "$arch" in
-    x86_64|ppc64le|s390x)
+    ppc64le|s390x)
       echo "/lib64"
       ;;
-    aarch64|armv7|i686|riscv64)
-      echo "/lib"
-      ;;
     *)
-      die "cannot derive libc shared-library directory from: $arch"
+      echo "/lib"
       ;;
   esac
 }
@@ -196,10 +196,19 @@ EOF
 
     info "dynamic dependencies:"
     readelf -d "$test_binary" | grep "NEEDED" || true
+
+    local interp
+    interp="$(readelf -l "$test_binary" 2>/dev/null \
+      | awk '/interpreter/ {print $NF; exit}')"
+    if [[ -n "$interp" && "$interp" == *"$SYSROOT"* ]]; then
+      die "sysroot is not relocatable: PT_INTERP contains the build sysroot ($interp)"
+    fi
+    info "PT_INTERP: ${interp:-(none)} (sysroot-relative: ok)"
   fi
 
   rm -f "$test_source" "$test_binary"
 }
+
 
 ARCH="${ARCH:-x86_64}"
 LIBC="${LIBC:-glibc}"
@@ -221,6 +230,9 @@ HEADERS_VERSION="${HEADERS_VERSION:-7.1.8}"
 
 MIN_KERNEL="${MIN_KERNEL:-5.10}"
 LIBC_SLIBDIR="${LIBC_SLIBDIR:-$(default_slibdir "$ARCH")}"
+LIBC_RTLDDIR="${LIBC_RTLDDIR:-$LIBC_SLIBDIR}"
+
+GCC_SYSROOT_DEFAULT="${GCC_SYSROOT_DEFAULT:-$SYSROOT}"
 
 GCC_TARGET_CONFIGURE_ARGS=()
 TARGET_CFLAGS=(-O2) # this is set explicitly because otherwise gcc will throw a hissy fit about not having compiler optimizations on.
@@ -235,6 +247,21 @@ case "$LIBC" in
     die "unsupported libc: $LIBC"
     ;;
 esac
+
+# libc_slibdir / libc_rtlddir must be sysroot-relative paths. if they
+# contain the build sysroot or prefix, glibc bakes a host-absolute path
+# into ld.so and the resulting sysroot cannot be copied and stuff which SUCKS
+for var in LIBC_SLIBDIR LIBC_RTLDDIR; do
+  local_val="${!var}"
+  case "$local_val" in
+    /*) : ;;
+    *)  die "$var must be an absolute sysroot path, got: $local_val" ;;
+  esac
+  case "$local_val" in
+    *"$SYSROOT"*|*"$PREFIX"*) die "$var must not contain the sysroot or prefix path: $local_val" ;;
+  esac
+done
+unset local_val
 
 case "$ARCH" in # once again i only properly tested aarch64 but the others are also supposed to work
 # things are taken from:
@@ -291,7 +318,7 @@ case "$ARCH" in # once again i only properly tested aarch64 but the others are a
     ;;
 
   ppc64le|s390x)
-    # The target triples select the required 64-bit ABI and endianness.
+    # the target triples select the required 64-bit ABI and endianness.
     ;;
 
   *)
@@ -319,8 +346,10 @@ info "target triple: $TARGET"
 info "architecture: $ARCH"
 info "libc: $LIBC"
 info "libc runtime directory: $LIBC_SLIBDIR"
+info "libc loader directory:  $LIBC_RTLDDIR"
 info "toolchain: $TOOLCHAIN"
 info "sysroot: $SYSROOT"
+info "gcc default sysroot: $GCC_SYSROOT_DEFAULT"
 info "sources: $SOURCES"
 info "build directories: $BUILD"
 
@@ -363,7 +392,7 @@ build_directory "binutils"
   --host="$BUILD_TRIPLE" \
   --target="$TARGET" \
   --prefix="$TOOLCHAIN" \
-  --with-sysroot="$SYSROOT" \
+  --with-sysroot="$GCC_SYSROOT_DEFAULT" \
   --disable-nls \
   --disable-werror \
   --disable-gprofng \
@@ -380,7 +409,7 @@ build_directory "gcc-stage1"
   --host="$BUILD_TRIPLE" \
   --target="$TARGET" \
   --prefix="$TOOLCHAIN" \
-  --with-sysroot="$SYSROOT" \
+  --with-sysroot="$GCC_SYSROOT_DEFAULT" \
   --with-glibc-version="$GLIBC_VERSION" \
   --without-headers \
   --disable-shared \
@@ -430,6 +459,10 @@ export AR="$TARGET-ar"
 export RANLIB="$TARGET-ranlib"
 export NM="$TARGET-nm"
 
+# libc_cv_slibdir and libc_cv_rtlddir are pinned to *sysroot-relative*
+# paths so glibc does not bake the build sysroot into ld.so or libc.so.
+# Without libc_cv_rtlddir, glibc's default can leak the sysroot path
+# under some cross-compile configurations.
 CFLAGS="${CFLAGS:-} ${TARGET_CFLAGS[*]}" \
 "$GLIBC_SOURCE/configure" \
   --prefix=/usr \
@@ -439,46 +472,106 @@ CFLAGS="${CFLAGS:-} ${TARGET_CFLAGS[*]}" \
   --enable-kernel="$MIN_KERNEL" \
   --disable-nscd \
   --disable-werror \
-  libc_cv_slibdir="$LIBC_SLIBDIR"
+  libc_cv_slibdir="$LIBC_SLIBDIR" \
+  libc_cv_rtlddir="$LIBC_RTLDDIR"
 
 make
 make DESTDIR="$SYSROOT" install
-make_usr_alias() {
-  local name="$1"
-  local usr_path="$SYSROOT/usr/$name"
-  local root_path="$SYSROOT/$name"
-
-  [[ -e "$usr_path" || -L "$usr_path" ]] || return 0
-
-  if [[ -L "$usr_path" ]]; then
-    info "already a symlink: /usr/$name"
-    return 0
-  fi
-
-  mkdir -p "$root_path"
-
-  # Preserve anything installed there before replacing the directory.
-  if [[ -d "$usr_path" ]]; then
-    cp -a "$usr_path/." "$root_path/"
-    rm -rf "$usr_path"
-  else
-    die "cannot convert /usr/$name: it is not a directory or symlink"
-  fi
-
-  ln -s "../$name" "$usr_path"
-  info "created sysroot symlink: /usr/$name -> ../$name"
-}
-
-make_usr_alias bin
-make_usr_alias lib
-make_usr_alias lib64
-make_usr_alias sbin
 
 unset CC
 unset CXX
 unset AR
 unset RANLIB
 unset NM
+
+# NOW I HAVE TO DO SYMLINKS A DIFFERENT WAY THANKS TO OVERLAYFS. LONG LIVE OVERLAYFS
+
+merge_into_usr() {
+  local name="$1"
+  local root_path="$SYSROOT/$name"
+  local usr_path="$SYSROOT/usr/$name"
+
+  # we only do top level dirs fuck off
+  case "$name" in
+    */*) die "merge_into_usr: invalid name: $name" ;;
+  esac
+
+  [[ -e "$root_path" || -L "$root_path" ]] || return 0
+
+  if [[ -L "$root_path" ]]; then
+    local current
+    current="$(readlink "$root_path")"
+    if [[ "$current" != "usr/$name" ]]; then
+      die "/$name is a symlink to '$current', expected 'usr/$name'"
+    fi
+    info "already merged: /$name -> usr/$name"
+    return 0
+  fi
+
+  [[ -d "$root_path" ]] || die "cannot merge /$name: not a directory"
+
+  #
+  local root_real usr_real
+  root_real="$(readlink -f "$root_path" 2>/dev/null || true)"
+  usr_real="$(readlink -f "$usr_path"  2>/dev/null || true)"
+
+  if [[ -n "$root_real" && "$root_real" == "$usr_real" ]]; then
+    info "/$name and /usr/$name already resolve to the same directory; skipping copy"
+  else
+    mkdir -p "$usr_path"
+    # -a preserves perms/symlinks/timestamps. overwrite is fine because
+    # glibc installs identical content into /usr and /usr/whatever
+    cp -a "$root_path/." "$usr_path/"
+  fi
+
+  rm -rf "$root_path"
+  ln -s "usr/$name" "$root_path"
+  info "merged: /$name -> usr/$name"
+}
+
+merge_into_usr lib64
+merge_into_usr lib
+merge_into_usr bin
+merge_into_usr sbin
+
+# ensure that /usr/POOP is areal folder
+for d in lib lib64 bin sbin; do
+  if [[ -L "$SYSROOT/usr/$d" ]]; then
+    die "/usr/$d is still a symlink, you fucked up"
+  fi
+done
+
+for script in "$SYSROOT"/usr/lib/libc.so "$SYSROOT"/usr/lib/libc.so.6; do
+  [[ -f "$script" ]] || continue
+  head -c 256 "$script" | grep -q 'GNU ld script' || continue
+  while IFS= read -r ref; do
+    [[ -e "$SYSROOT$ref" ]] || die "$script references missing $ref"
+  done < <(grep -oE '/[A-Za-z0-9._/-]+' "$script")
+done
+
+# this shit is done to make sure sysroot does not break when moved after compilation
+info "auditing sysroot for host-absolute paths"
+
+hits="$(grep -rIl -F "$SYSROOT" "$SYSROOT" 2>/dev/null \
+  | grep -v '/\.pbuild-extracted$' \
+  | grep -v '/\.pbuild-sysroot-info$' \
+  || true)"
+
+if [[ -n "$hits" ]]; then
+  info "files referencing the build sysroot path:"
+  printf '  %s\n' "$hits"
+  die "sysroot is not relocatable: host paths baked into text files"
+fi
+
+# ld.so.conf and friends must reference /usr, /lib
+for f in "$SYSROOT"/etc/ld.so.conf "$SYSROOT"/etc/ld.so.conf.d/*; do
+  [[ -e "$f" ]] || continue
+  if grep -qF "$SYSROOT" "$f"; then
+    sed -i "s|$SYSROOT||g" "$f"
+    info "rewrote host paths in $f"
+  fi
+done
+
 
 info "building final cross GCC"
 build_directory "gcc-final"
@@ -488,7 +581,7 @@ build_directory "gcc-final"
   --host="$BUILD_TRIPLE" \
   --target="$TARGET" \
   --prefix="$TOOLCHAIN" \
-  --with-sysroot="$SYSROOT" \
+  --with-sysroot="$GCC_SYSROOT_DEFAULT" \
   --with-build-sysroot="$SYSROOT" \
   --with-native-system-header-dir=/usr/include \
   --enable-languages=c,c++ \
