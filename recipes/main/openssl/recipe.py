@@ -1,5 +1,5 @@
 pkgname = "openssl"
-pkgver = "3.5.7"
+pkgver = "4.1.0"
 pkgrel = 0
 pkgdesc = "Library for various kinds of cryptography"
 url = "openssl-library.org"
