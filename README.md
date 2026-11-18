@@ -77,7 +77,7 @@ While running things in the nographic mode is far from necessary, this allows us
 For even more information on how the system is built, you can inspect the makeisoworse script itself, livecd-base and base-poppy recipes.
 Do note, that as of now, you need to enable agetty and udevd manually before exiting to dinit and continuing to boot, otherwise you might get seemingly stuck on local.target. 
 
-## How to build my packages and link them against the packages provided by the other recipes?
+## How to build my packages and link them against the packages provided by the other recipes? (Outdated, see next section)
 First you run `/etc/scripts/makesysroot.py` to make a sysroot. If you need more packages in it, just add them to /recipes/main/sysroot-base
 Then, inside the build directory, you could place a script like this:
 `run_sysroot.py`
@@ -98,6 +98,15 @@ bwrap \
 ```
 In this configuration, the sysroot literally mirrors the root partition that would normally be there, and also makes the poppyports folder shared. This way, you can invoke pbuild from inside the sysroot to build new packages linked against what Poppycrow offers.
 In the future, this entire process should be automated.
+
+##  How do I build things against Crow-vendored Glibc and others? (This section also serves as kind of a quickstart guide for poppyports)
+
+Due to the way pbuild works, you are effectively forced to do so. Don't worry, it's relatively straightforward to set up.
+1. Make a folder that will house all of your targets. For the purposes of this example, it will be ./sysroots (or poppyports/sysroots if we are being pedantic)
+2. Edit pbuld.conf and add your desired sysroot lookup dir here like this: `sysroot = ./sysroots`. The difference between `sysroot` and `sysroot_path` is that `sysrootpath` is something you should NEVER use, while `sysroot` is used for lookup. The whole thing is a mess and I need to change it someday. If pbuild.conf does not exist, attempt to build something, even if it errors out. Pbuild should then generate a pbuild.conf that you will be able to edit.
+3. Run `ARCH=<insert architecture> pbuld/etc/scripts/build_toolchain.sh`. It will fetch and build GCC and binutils and will produce `pbuld/etc/scripts/build/ccstrap`. 
+4. Grab `pbuld/etc/scripts/build/ccstrap/toolchain` and `pbuld/etc/scripts/build/ccstrap/sysroot` and place them in `poppyports/sysroots/<ARCH>-<LIBC>`, or whatever lookup directory for the sysroot you configured.
+5. Then you will be able to specify a cross-compilation target via `pbuild /path/to/recipe -target <ARCH>-<LIBC>`
 
 ## Subtitles?
 subtitles by DimaTorzok
